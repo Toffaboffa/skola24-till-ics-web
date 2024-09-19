@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skola24 till iCal (.ics)</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script>
+        function logToConsole(message) {
+            var consoleDiv = document.getElementById('console');
+            var messageElement = document.createElement('div');
+            messageElement.textContent = message;
+            consoleDiv.appendChild(messageElement);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight; // Scrolla till botten
+        }
+
+        function submitForm(event) {
+            event.preventDefault();
+            var formData = new FormData(document.getElementById('form'));
+
+            logToConsole("Startar generering av ICS-fil...");
+
+            fetch('/generate', {
+                method: 'POST',
+                body: formData
+            }).then(response => response.json())
+            .then(data => {
+                if (data.filename) {
+                    logToConsole(`ICS-fil skapad: ${data.filename}`);
+                    logToConsole("Hämtar data från servern...");
+
+                    // Vänta en kort stund innan vi startar nedladdningen för att ge tid för filen att bli tillgänglig
+                    setTimeout(() => {
+                        window.location.href = `/download/${data.filename}`;
+                    }, 1000); // Vänta 1 sekund innan nedladdning
+                } else if (data.error) {
+                    logToConsole(`Fel: ${data.error}`);
+                }
+            }).catch(error => {
+                logToConsole(`Fel: ${error}`);
+            });
+        }
+
+        function clearForm() {
+            var form = document.getElementById('form');
+            form.reset();
+            logToConsole("Formuläret har tömts.");
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('form').addEventListener('submit', submitForm);
+            document.getElementById('clearButton').addEventListener('click', clearForm);
+        });
+    </script>
+</head>
+<body>
+    <div class="header-background"></div>
+    <h1>Skola24 till iCal (.ics)</h1>
+    <p class="subtitle">Av Kristoffer Åberg</p>
+    <p class="intro">Denna webbplats hjälper dig att generera en iCal (.ics) fil för ditt schema, för import till din kalender. Fyll i formuläret nedan med information om din stads domän, skolans namn och ID, samt årets ID. Tryck sedan på "Generera .ics" för att skapa filen. iCalendar kan användas i din kalenderapp, Outlook eller annat program som stöder iCal-formatet.
+    -- Mer här: [<a href="static/info.html" target="_blank">readme</a>]</p>
+    </p>
+    <form id="form">
+        <label for="domain">Domän:</label>
+        <input type="text" id="domain" name="domain" required>
+        <small>Exempel: gotham.skola24.se</small>
+
+        <label for="school_name">Skola:</label>
+        <input type="text" id="school_name" name="school_name" required>
+        <small>Exempel: Gotham High</small>
+
+        <label for="unit_guid">Skol-ID (unit_guid):</label>
+        <input type="text" id="unit_guid" name="unit_guid" required>
+        <small>Exempel: ODBmYWIzYjotM2Yw... (48 tecken)</small>
+
+        <label for="school_year">År-ID (school_year):</label>
+        <input type="text" id="school_year" name="school_year" required>
+        <small>Exempel: 7d35b17b-42eb-46... (32 tecken)</small>
+
+        <label for="teacher_id">Lärar-ID:</label>
+        <input type="text" id="teacher_id" name="teacher_id" required>
+        <small>Exempel: BW</small>
+
+        <button type="submit">Generera .ics</button>
+        <button type="button" id="clearButton">Töm</button>
+    </form>
+
+    <div id="console"></div>
+
+    <footer>
+        <p>Kontaktuppgifter: <a href="mailto:kristoffer.aberg@skola.kumla.se">kristoffer.aberg@skola.kumla.se</a></p>
+    </footer>
+</body>
+</html>
