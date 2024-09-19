@@ -3,92 +3,209 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Skola24 till iCal (.ics)</title>
+    <title>Information</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #console {
+            background-image: url('bg2.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: #e0e0e0;
+            border: 1px solid #444;
+            padding: 1em;
+            max-width: 900px;
+            width: 100%;
+            height: calc(100vh - 160px);
+            overflow-y: scroll;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 0.8em;
+            text-align: left;
+            box-sizing: border-box;
+            margin: 20px;
+            line-height: 1.4;
+        }
+    </style>
     <script>
         function logToConsole(message) {
             var consoleDiv = document.getElementById('console');
             var messageElement = document.createElement('div');
-            messageElement.textContent = message;
+            messageElement.innerHTML = message; // Använd innerHTML istället för textContent
             consoleDiv.appendChild(messageElement);
             consoleDiv.scrollTop = consoleDiv.scrollHeight; // Scrolla till botten
         }
 
-        function submitForm(event) {
-            event.preventDefault();
-            var formData = new FormData(document.getElementById('form'));
-
-            logToConsole("Startar generering av ICS-fil...");
-
-            fetch('/generate', {
-                method: 'POST',
-                body: formData
-            }).then(response => response.json())
-            .then(data => {
-                if (data.filename) {
-                    logToConsole(`ICS-fil skapad: ${data.filename}`);
-                    logToConsole("Hämtar data från servern...");
-
-                    // Vänta en kort stund innan vi startar nedladdningen för att ge tid för filen att bli tillgänglig
-                    setTimeout(() => {
-                        window.location.href = `/download/${data.filename}`;
-                    }, 1000); // Vänta 1 sekund innan nedladdning
-                } else if (data.error) {
-                    logToConsole(`Fel: ${data.error}`);
-                }
-            }).catch(error => {
-                logToConsole(`Fel: ${error}`);
-            });
-        }
-
-        function clearForm() {
-            var form = document.getElementById('form');
-            form.reset();
-            logToConsole("Formuläret har tömts.");
-        }
-
         document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('form').addEventListener('submit', submitForm);
-            document.getElementById('clearButton').addEventListener('click', clearForm);
+            var messages = [
+    "Schema till iCal (.ics) Generator<br>",
+    "================================<br>",
+    "<br>",
+    "Detta projekt genererar en .ics-fil (iCal-fil) från ett schema på Skola24. Du fyller i relevant information och får ut en iCal-fil som du kan importera till din kalender. Du kan läsa mer hur det fungerar längre ned.<br>",
+    "<br>",
+    "Användning<br>",
+    "----------<br>",
+    "<br>",
+    "1. Fyll i de fält som efterfrågas:<br>",
+    "- Domän:            ex. kumla.skola24.se<br>",
+    "- Skola:            ex. Vialundskolan<br>",
+    "- Skol-ID (unit_guid):    ex. ODBmYWIzYjgtM2YwYi10ETT0TEST0ZmMtMjhjZWI0ZTVhZGE0<br>",
+    "- År-ID (school_year):    ex. 0d35b17b-42eb-4311-9328-00eTt0TeSt00<br>",
+    "- Lärare-ID:        ex. KÅ<br>",
+    "<br>",
+    "2. Klicka på \"Generera .ics\" för att skapa din .ics-fil.<br>",
+    "3. Filen skapas och laddas hem.<br>",
+    "4. Importera till din kalender.<br>",
+    "<br>",
+    "Arbetsflöde<br>",
+    "-----------<br>",
+    "<br>",
+    "1. **Formulärinmatning:**<br>",
+    "   Användaren fyller i följande fält i formuläret:<br>",
+    "   - Domän (ex. kumla.skola24.se)<br>",
+    "   - Skolans namn (ex. Vialundskolan)<br>",
+    "   - Skol-ID (ex ODBmYWIzYjgtM2YwYi10ETT0TEST0ZmMtMjhjZWI0ZTVhZGE0<br>",
+    "   - År-ID (ex. 0d35b17b-42eb-4311-9328-00eTt0TeSt00<br>",
+    "   - Lärare-ID (ex. KÅ<br>",
+    "<br>",
+    "2. **Autentisering:**<br>",
+    "   Formulärdatan används för att kontakta Skola24:s API och autentisera användaren baserat på domän och skolinformation. Lärarens schema identifieras med hjälp av Lärar-ID och År-ID.<br>",
+    "<br>",
+    "3. **Hämtning av schema:**<br>",
+    "   När användaren är autentiserad hämtas schema-data från Skola24 som bearbetas och konverteras till ett standardiserat .ics-format.<br>",
+    "<br>",
+    "4. **Generering av iCal-fil:**<br>",
+    "   - Kalenderhändelser skapas vecka för vecka.<br>",
+    "   - Varje lektion får ett start- och sluttid baserat på schemat.<br>",
+    "   - Information om klass, ämne, och sal läggs till som beskrivning i varje händelse.<br>",
+    "   - Händelserna placeras automatiskt på rätt datum och tid i iCal-formatet.<br>",
+    "   - .ics-filen genereras och laddas ner lokalt.<br>",
+    "<br>",
+    "5. **Färdigställande:**<br>",
+    "   Filen är redo att användas och innehåller all relevant schemainformation från Skola24.<br>",
+    "<br>",
+    "Sammanställning av filer som jobbar<br>",
+    "-----------------------------------<br>",
+    "<br>",
+    "Totalt antal rader kod: 382<br>",
+    "    - app.py: 50 rader<br>",
+    "    - schema.py: 179 rader<br>",
+    "    - index.html: 112 rader<br>",
+    "    - styles.css: 41 rader<br>",
+    "<br>",
+    "Totalt antal tecken: 14130<br>",
+    "Antal variabler totalt: 34<br>",
+    "<br>",
+    "  Variabelnamn:<br>",
+    "<br>",
+    "    app.py:<br>",
+    "<br>",
+    "    - app<br>",
+    "    - domain<br>",
+    "    - school_name<br>",
+    "    - unit_guid<br>",
+    "    - school_year<br>",
+    "    - teacher_id<br>",
+    "    - ics_filename<br>",
+    "    - message<br>",
+    "    - filename<br>",
+    "<br>",
+    "    schema.py:<br>",
+    "<br>",
+    "    - hdata<br>",
+    "    - s<br>",
+    "    - larare<br>",
+    "    - singsresp<br>",
+    "    - keyr<br>",
+    "    - weekrequest<br>",
+    "    - response<br>",
+    "    - data<br>",
+    "    - indata<br>",
+    "    - week<br>",
+    "    - event<br>",
+    "    - teacher<br>",
+    "    - first_day_of_year<br>",
+    "    - date<br>",
+    "    - line<br>",
+    "    - events<br>",
+    "    - NNN<br>",
+    "    - timestamp<br>",
+    "    - file_name<br>",
+    "    - f<br>",
+    "<br>",
+    "    index.html (JavaScript):<br>",
+    "<br>",
+    "    - consoleDiv<br>",
+    "    - messageElement<br>",
+    "    - formData<br>",
+    "    - data<br>",
+    "    - error<br>",
+    "    - form<br>",
+    "<br>",
+    "    styles.css:<br>",
+    "<br>",
+    "    - Inga variabler (CSS innehåller inte variabler i traditionell mening)<br>",
+    "<br>",
+    "Antal funktioner totalt: 14<br>",
+    "<br>",
+    "  Funktionsnamn:<br>",
+    "<br>",
+    "    app.py:<br>",
+    "<br>",
+    "    - log_message<br>",
+    "    - index<br>",
+    "    - generate<br>",
+    "    - status<br>",
+    "    - download<br>",
+    "<br>",
+    "    schema.py:<br>",
+    "<br>",
+    "    - log_message<br>",
+    "    - generate_referer<br>",
+    "    - get_id_for<br>",
+    "    - get_key<br>",
+    "    - get_week<br>",
+    "    - get_weekdata<br>",
+    "    - todatestr<br>",
+    "    - todate<br>",
+    "    - geticsfor<br>",
+    "<br>",
+    "    index.html (JavaScript):<br>",
+    "<br>",
+    "    - logToConsole<br>",
+    "    - submitForm<br>",
+    "    - clearForm<br>",
+    "<br>",
+    "Om projektet<br>",
+    "------------<br>",
+    "<br>",
+    "Detta projekt är skapat av Kristoffer Åberg med hjälp av ChatGPT för att automatisera hämtningen av schema från Skola24 och generera en iCal-fil.<br>"
+];
+
+            let index = 0;
+            function displayNextMessage() {
+                if (index < messages.length) {
+                    logToConsole(messages[index]);
+                    index++;
+                    setTimeout(displayNextMessage, 100); // Vänta 0.1 sekunder mellan meddelanden
+                }
+            }
+
+            setTimeout(displayNextMessage, 2000); // Vänta 2 sekunder innan första meddelandet
         });
     </script>
 </head>
 <body>
-    <div class="header-background"></div>
-    <h1>Skola24 till iCal (.ics)</h1>
-    <p class="subtitle">Av Kristoffer Åberg</p>
-    <p class="intro">Denna webbplats hjälper dig att generera en iCal (.ics) fil för ditt schema, för import till din kalender. Fyll i formuläret nedan med information om din stads domän, skolans namn och ID, samt årets ID. Tryck sedan på "Generera .ics" för att skapa filen. iCalendar kan användas i din kalenderapp, Outlook eller annat program som stöder iCal-formatet.
-    -- Mer här: [<a href="static/info.html" target="_blank">readme</a>]</p>
-    </p>
-    <form id="form">
-        <label for="domain">Domän:</label>
-        <input type="text" id="domain" name="domain" required>
-        <small>Exempel: gotham.skola24.se</small>
-
-        <label for="school_name">Skola:</label>
-        <input type="text" id="school_name" name="school_name" required>
-        <small>Exempel: Gotham High</small>
-
-        <label for="unit_guid">Skol-ID (unit_guid):</label>
-        <input type="text" id="unit_guid" name="unit_guid" required>
-        <small>Exempel: ODBmYWIzYjotM2Yw... (48 tecken)</small>
-
-        <label for="school_year">År-ID (school_year):</label>
-        <input type="text" id="school_year" name="school_year" required>
-        <small>Exempel: 7d35b17b-42eb-46... (32 tecken)</small>
-
-        <label for="teacher_id">Lärar-ID:</label>
-        <input type="text" id="teacher_id" name="teacher_id" required>
-        <small>Exempel: BW</small>
-
-        <button type="submit">Generera .ics</button>
-        <button type="button" id="clearButton">Töm</button>
-    </form>
-
     <div id="console"></div>
-
-    <footer>
-        <p>Kontaktuppgifter: <a href="mailto:kristoffer.aberg@skola.kumla.se">kristoffer.aberg@skola.kumla.se</a></p>
-    </footer>
 </body>
 </html>
