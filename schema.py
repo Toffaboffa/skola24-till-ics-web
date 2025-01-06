@@ -108,8 +108,13 @@ def get_weekdata(week_nr, larare_id, s, domain, school_year, unit_guid):
     return week
 
 def todatestr(week, day):
-    first_day_of_year = arrow.get(arrow.now().year, 1, 1)
-    date = first_day_of_year.shift(weeks=week-1).shift(days=day-1)
+    # Hämta årets första torsdagsdatum enligt ISO-standard
+    first_thursday = arrow.get(arrow.now().year, 1, 4)
+    # Skifta tillbaka till måndagen för vecka 1
+    first_monday = first_thursday.floor('week')
+    # Beräkna datum utifrån vecka och dag
+    date = first_monday.shift(weeks=week-1).shift(days=day-1)
+    log_message(f"Beräknar datum för vecka {week}, dag {day}: {date.format('YYYY-MM-DD')}")
     return date.format('YYYYMMDD')
 
 def todate(date_str, time_str):
