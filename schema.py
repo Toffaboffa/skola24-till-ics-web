@@ -1,5 +1,6 @@
 import os
 import requests
+from datetime import datetime
 def log_message(message):
     log_file_path = '/tmp/log.txt'
     formatted_message = f"{datetime.now()}: {message}"
