@@ -163,11 +163,11 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare):
                 # Sammanfoga texter om de finns
                 if "texts" in line and line["texts"]:
                     all_texts = [t.get("value", "") if isinstance(t, dict) else t for t in line["texts"]]
-                    # Extract first part (e.g., FY 8A) for SUMMARY
-                    event["summary"] = all_texts[0] if len(all_texts) > 0 else ""
+                    # Uppdaterad SUMMARY med Lektion + Grupp
+                    event["summary"] = f"{all_texts[0]} {all_texts[2]}" if len(all_texts) > 2 else all_texts[0]
                     # Add remaining parts to DESCRIPTION
                     description.extend(all_texts[1:])
-                
+
                 # Lägg till lärares namn om det finns
                 if "teachers" in line and line["teachers"]:
                     teacher_names = " ".join([t.get("fullName", "") for t in line["teachers"]])
