@@ -124,7 +124,7 @@ def todatestr(week, day):
     Beräkna datum från vecka och veckodag enligt ISO-standard
     """
     year = arrow.now().year
-    first_week = arrow.get(year, 1, 4).floor("week")  # ISO-standard: första torsdagen definierar vecka 1
+    first_week = arrow.get(year, 1, 4).floor("iso_week")  # ISO-standard: första torsdagen definierar vecka 1
     date = first_week.shift(weeks=week - 1, days=day - 1)
     log_message(f"Beräknar datum för vecka {week}, dag {day}: {date.format('YYYY-MM-DD')}")
     return date.format("YYYYMMDD")
