@@ -13,6 +13,10 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 def index():
     return render_template('index.html')
 
+@app.route('/readme')
+def readme():
+    return render_template('readme.html')
+
 @app.route('/generate', methods=['POST'])
 def generate():
     domain = request.form['domain']
