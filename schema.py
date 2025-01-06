@@ -108,17 +108,16 @@ def get_weekdata(week_nr, larare_id, s, domain, school_year, unit_guid):
     return week
 
 def todatestr(week, day):
-    # Hämta årets första torsdagsdatum enligt ISO-standard
     first_thursday = arrow.get(arrow.now().year, 1, 4)
-    # Skifta tillbaka till måndagen för vecka 1
     first_monday = first_thursday.floor('week')
-    # Beräkna datum utifrån vecka och dag
     date = first_monday.shift(weeks=week-1).shift(days=day-1)
     log_message(f"Beräknar datum för vecka {week}, dag {day}: {date.format('YYYY-MM-DD')}")
     return date.format('YYYYMMDD')
 
 def todate(date_str, time_str):
-    return f"{date_str}T{time_str}:00Z"
+    if ":" in time_str:
+        time_str = time_str.replace(":", "")[:4]
+    return f"{date_str}T{time_str}Z"
 
 def geticsfor(domain, school_name, unit_guid, school_year, larare):
     log_message("Startar processen för att skapa ICS-fil")
@@ -139,29 +138,27 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare):
             for line in weeks[week][day]:
                 event = {"date": date}
                 event["end"] = line.get("timeEnd", "")
-                event["uid"] = line.get("guidId", "")
+                event["uid"] = f"{line.get('guidId', '')}-{date}-{event['start']}"
                 event["start"] = line.get("timeStart", "")
                 event["summary"] = ""
 
                 if "texts" in line and line["texts"]:
-                    if isinstance(line["texts"][0], dict):
-                        event["summary"] = line["texts"][0].get("value", "")
-                    else:
-                        event["summary"] = line["texts"][0]  # Om det är en sträng
+                    event["summary"] = " ".join([t.get("value", "") if isinstance(t, dict) else t for t in line["texts"]])
 
                 if "teachers" in line and line["teachers"]:
-                    for teacher in line["teachers"]:
-                        if teacher.get("fullName") == larare:
-                            event["summary"] += f" {teacher.get('fullName', '')}"
-                            event["summary"] += f" {line.get('lessonType', '')}"
-                            event["summary"] += f" {line.get('text', '')}"
+                    teacher_names = " ".join([t.get("fullName", "") for t in line["teachers"]])
+                    event["summary"] += f" {teacher_names}"
 
+                if not event["summary"] or "Lunch" in event["summary"] or "Rastvärd" in event["summary"]:
+                    continue
+
+                log_message(f"Skapar event: {event}")
                 events.append(event)
 
     NNN = larare
     timestamp = datetime.now().strftime('%y%m%d_%H%M')
     file_name = f"schema_{NNN}_{timestamp}.ics"
-    file_path = os.path.join('/tmp', file_name)  # Spara ICS-fil till /tmp
+    file_path = os.path.join('/tmp', file_name)
 
     try:
         with open(file_path, 'w') as f:
