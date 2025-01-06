@@ -53,15 +53,6 @@ def get_key(s):
         log_message(f"Fel vid get_key: {e}")
         return None
 
-# Ny funktion: Justera veckodagar
-def adjust_day(api_day):
-    """
-    Justera veckodag från söndag som första dag (API-logik) till måndag som första dag (ISO-standard).
-    """
-    adjusted_day = (api_day - 1) % 7 + 1
-    log_message(f"Justerar dag från API: {api_day} till ISO-standard: {adjusted_day}")
-    return adjusted_day
-
 def get_week(week, larare_id, s, domain, school_year, unit_guid):
     log_message(f"Hämtar veckodata för vecka {week}")
     if week == 26:
@@ -118,6 +109,14 @@ def get_weekdata(week_nr, larare_id, s, domain, school_year, unit_guid):
             log_message(f"Event från API: raw_day={raw_day}, adjusted_day={adjusted_day}")
             week[adjusted_day - 1].append(event)
     return week
+    
+ def adjust_day(api_day):
+    """
+    Justera veckodag från söndag som första dag (API-logik) till måndag som första dag (ISO-standard).
+    """
+    adjusted_day = (api_day - 1) % 7 + 1
+    log_message(f"Justerar dag från API: {api_day} till ISO-standard: {adjusted_day}")
+    return adjusted_day
 
 def todatestr(week, day):
     """
@@ -133,8 +132,6 @@ def todate(date_str, time_str):
     if ":" in time_str:
         time_str = time_str.replace(":", "")[:4]
     return f"{date_str}T{time_str}Z"
-
-# Resten av koden för att skapa ICS-filen förblir oförändrad
 
 def geticsfor(domain, school_name, unit_guid, school_year, larare):
     log_message("Startar processen för att skapa ICS-fil")
