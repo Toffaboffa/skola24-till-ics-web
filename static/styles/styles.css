@@ -94,7 +94,7 @@ button:hover {
 
 #console {
     background-color: #2d2d2d;
-    background-image: url('bg.png');
+	background-image: url('{{ url_for('static', filename='bilder/bg.png') }}');
     background-size: cover;
     background-position: center;
     color: #e0e0e0;
