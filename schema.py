@@ -5,7 +5,8 @@ from datetime import datetime
 
 # Loggning
 def log_message(message):
-    with open('log.txt', 'a') as log_file:
+    log_file_path = '/tmp/log.txt'  # Uppdaterad loggfilplats för Render
+    with open(log_file_path, 'a') as log_file:
         log_file.write(f"{datetime.now()}: {message}\n")
 
 hdata = {
@@ -152,12 +153,13 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare):
 
                 events.append(event)
 
-    NNN = larare  # Här sätter vi det till lärar-ID
+    NNN = larare
     timestamp = datetime.now().strftime('%y%m%d_%H%M')
     file_name = f"schema_{NNN}_{timestamp}.ics"
+    file_path = os.path.join('/tmp', file_name)  # Spara ICS-fil till /tmp
 
     try:
-        with open(f'{file_name}', 'w') as f:
+        with open(file_path, 'w') as f:
             f.write("BEGIN:VCALENDAR\n")
             f.write("VERSION:2.0\n")
             f.write("PRODID:-//Your Organization//NONSGML Your Product//EN\n")
@@ -169,7 +171,7 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare):
                 f.write(f"UID:{event['uid']}\n")
                 f.write("END:VEVENT\n")
             f.write("END:VCALENDAR\n")
-        log_message(f"ICS-fil skapad: {file_name}")
+        log_message(f"ICS-fil skapad: {file_path}")
         return file_name
     except Exception as e:
         log_message(f"Fel vid skrivning av ICS-fil: {e}")

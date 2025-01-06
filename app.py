@@ -1,15 +1,13 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
 import os
-import datetime
 import logging
 from schema import geticsfor  # Importera din ICS-genereringsfunktion
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = '/'
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def log_message(message):
-    app.logger.info(message)
+# Konfigurera uppladdningsmappen till /tmp
+app.config['UPLOAD_FOLDER'] = '/tmp'
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 @app.route('/')
 def index():
@@ -23,27 +21,24 @@ def generate():
     school_year = request.form['school_year']
     teacher_id = request.form['teacher_id']
 
-    log_message(f'Skapar ICS-fil för {teacher_id}...')
+    logging.info(f'Skapar ICS-fil för {teacher_id}...')
 
-    # Generera ICS-fil med riktiga händelser
+    # Generera ICS-fil
     ics_filename = geticsfor(domain, school_name, unit_guid, school_year, teacher_id)
+    if not ics_filename:
+        logging.error(f"Misslyckades med att skapa ICS-fil för {teacher_id}.")
+        return jsonify({'error': 'Misslyckades med att skapa ICS-fil'}), 500
 
-    log_message(f'ICS-fil skapad: {ics_filename}')
-
-    # Returnera filnamnet till klienten
+    logging.info(f'ICS-fil skapad: {ics_filename}')
     return jsonify({'filename': ics_filename})
-
-@app.route('/status')
-def status():
-    # Här kan du lägga till kod för att returnera status eller progressinformation
-    return jsonify({'status': 'Färdig', 'progress': 100})
 
 @app.route('/download/<filename>')
 def download(filename):
     try:
-        # Säkerställ att filen existerar innan den laddas ned
-        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+        # Returnera filen från /tmp-mappen
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
     except FileNotFoundError:
+        logging.error(f'Filen {filename} hittades inte.')
         return jsonify({'error': 'Filen hittades inte'}), 404
 
 if __name__ == '__main__':
