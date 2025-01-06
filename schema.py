@@ -5,7 +5,7 @@ from datetime import datetime
 
 # Loggning
 def log_message(message):
-    with open('/home/Toffaboffa/mysite/temp/log.txt', 'a') as log_file:
+    with open('log.txt', 'a') as log_file:
         log_file.write(f"{datetime.now()}: {message}\n")
 
 hdata = {
@@ -157,7 +157,7 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare):
     file_name = f"schema_{NNN}_{timestamp}.ics"
 
     try:
-        with open(f'/home/Toffaboffa/mysite/temp/{file_name}', 'w') as f:
+        with open(f'{file_name}', 'w') as f:
             f.write("BEGIN:VCALENDAR\n")
             f.write("VERSION:2.0\n")
             f.write("PRODID:-//Your Organization//NONSGML Your Product//EN\n")

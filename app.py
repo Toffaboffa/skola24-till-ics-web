@@ -5,7 +5,7 @@ import logging
 from schema import geticsfor  # Importera din ICS-genereringsfunktion
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = '/home/Toffaboffa/mysite/temp/'
+app.config['UPLOAD_FOLDER'] = '/'
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def log_message(message):
