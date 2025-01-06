@@ -94,6 +94,7 @@ def get_week(week, larare_id, s, domain, school_year, unit_guid):
         response.raise_for_status()
         data = response.json()
         log_message(f"Svar från get_week: {data}")
+        log_message(f"API-svar för vecka {week}: {data}")
         return data["data"].get("lessonInfo", [])
     except Exception as e:
         log_message(f"Fel vid get_week: {e}")
@@ -105,12 +106,18 @@ def get_weekdata(week_nr, larare_id, s, domain, school_year, unit_guid):
     week = [[], [], [], [], []]
     if indata:
         for event in indata:
+            log_message(f"Lektion: {event} på dag {event.get('dayOfWeekNumber', 1)}")
             week[event.get("dayOfWeekNumber", 1) - 1].append(event)
     return week
 
-def todatestr(week, day):
-    first_day_of_year = arrow.get(arrow.now().year, 1, 1)
-    date = first_day_of_year.shift(weeks=week-1).shift(days=day-1)
+def todatestr(week, day, school_year):
+    # Hämta startåret från skolåret, t.ex. "2024-2025" -> 2024
+    start_year = int(school_year.split("-")[0])
+    
+    # Använd ISO-standard för att hitta årets första vecka
+    first_week_date = arrow.get(start_year, 1, 4).floor('week')  # Första torsdagen i januari
+    date = first_week_date.shift(weeks=week-1).shift(days=day-1)
+    log_message(f"Vecka {week}, dag {day}: Beräknat datum är {date}")
     return date.format('YYYYMMDD')
 
 def todate(date_str, time_str):
@@ -130,27 +137,28 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare):
 
     events = []
     for week in weeks:
-    for day in range(5):
-        date = todatestr(week, day + 2)
-        for line in weeks[week][day]:
-            event = {"date": date}
-            event["end"] = line.get("timeEnd", "")
-            event["uid"] = line.get("guidId", "")
-            event["start"] = line.get("timeStart", "")
+        for day in range(5):  # Rätt indentering här
+            date = todatestr(week, day + 2, school_year)
+            for line in weeks[week][day]:
+                event = {"date": date}
+                event["end"] = line.get("timeEnd", "")
+                event["uid"] = line.get("guidId", "")
+                event["start"] = line.get("timeStart", "")
 
-            # Sammanfoga SUMMARY (ämne + klass)
-            event["summary"] = f"{line.get('texts', [''])[0]} {', '.join([klass['name'] for klass in line.get('classes', [])])}"
+                # Sammanfoga SUMMARY (ämne + klass)
+                event["summary"] = f"{line.get('texts', [''])[0]} {', '.join([klass['name'] for klass in line.get('classes', [])])}"
 
-            # Bygg DESCRIPTION
-            description_parts = []
-            if "rooms" in line and line["rooms"]:
-                description_parts.append(f"Salar: {', '.join([room['name'] for room in line['rooms']])}")
-            if "teachers" in line and line["teachers"]:
-                description_parts.append(f"Lärare: {', '.join([teacher['fullName'] for teacher in line['teachers']])}")
-            description_parts.append(f"Tid: {line.get('timeStart', '')} - {line.get('timeEnd', '')}")
-            event["description"] = " | ".join(description_parts)
-
-            events.append(event)
+                # Bygg DESCRIPTION
+                description_parts = []
+                if "rooms" in line and line["rooms"]:
+                    description_parts.append(f"Salar: {', '.join([room['name'] for room in line['rooms']])}")
+                if "teachers" in line and line["teachers"]:
+                    description_parts.append(f"Lärare: {', '.join([teacher['fullName'] for teacher in line['teachers']])}")
+                description_parts.append(f"Tid: {line.get('timeStart', '')} - {line.get('timeEnd', '')}")
+                event["description"] = " | ".join(description_parts)
+                
+                log_message(f"Skapar event: {event}")
+                events.append(event)
 
     NNN = larare
     timestamp = datetime.now().strftime('%y%m%d_%H%M')
