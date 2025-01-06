@@ -58,7 +58,9 @@ def adjust_day(api_day):
     """
     Justera veckodag från söndag som första dag (API-logik) till måndag som första dag (ISO-standard).
     """
-    return (api_day - 1) % 7 + 1
+    adjusted_day = (api_day - 1) % 7 + 1
+    log_message(f"Justerar dag från API: {api_day} till ISO-standard: {adjusted_day}")
+    return adjusted_day
 
 def get_week(week, larare_id, s, domain, school_year, unit_guid):
     log_message(f"Hämtar veckodata för vecka {week}")
@@ -100,7 +102,11 @@ def get_week(week, larare_id, s, domain, school_year, unit_guid):
         response.raise_for_status()
         data = response.json()
         log_message(f"Svar från get_week: {data}")
-        
+        return data["data"].get("lessonInfo", [])
+    except Exception as e:
+        log_message(f"Fel vid get_week: {e}")
+        return []
+
 def get_weekdata(week_nr, larare_id, s, domain, school_year, unit_guid):
     log_message(f"Hämtar veckodata för vecka {week_nr}")
     indata = get_week(week_nr, larare_id, s, domain, school_year, unit_guid)
