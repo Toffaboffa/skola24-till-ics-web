@@ -1,13 +1,14 @@
 import os
 import requests
-import arrow
-from datetime import datetime
-
-# Loggning
 def log_message(message):
-    log_file_path = '/tmp/log.txt'  # Uppdaterad loggfilplats för Render
-    with open(log_file_path, 'a') as log_file:
-        log_file.write(f"{datetime.now()}: {message}\n")
+    log_file_path = '/tmp/log.txt'
+    formatted_message = f"{datetime.now()}: {message}"
+    print(formatted_message)  # Logga till konsolen
+    try:
+        with open(log_file_path, 'a') as log_file:
+            log_file.write(f"{formatted_message}\n")
+    except Exception as e:
+        print(f"Fel vid loggning till fil: {e}")
 
 hdata = {
     'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:108.0) Gecko/20100101 Firefox/108.0',
@@ -129,29 +130,27 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare):
 
     events = []
     for week in weeks:
-        for day in range(5):
-            date = todatestr(week, day + 2)
-            for line in weeks[week][day]:
-                event = {"date": date}
-                event["end"] = line.get("timeEnd", "")
-                event["uid"] = line.get("guidId", "")
-                event["start"] = line.get("timeStart", "")
-                event["summary"] = ""
+    for day in range(5):
+        date = todatestr(week, day + 2)
+        for line in weeks[week][day]:
+            event = {"date": date}
+            event["end"] = line.get("timeEnd", "")
+            event["uid"] = line.get("guidId", "")
+            event["start"] = line.get("timeStart", "")
 
-                if "texts" in line and line["texts"]:
-                    if isinstance(line["texts"][0], dict):
-                        event["summary"] = line["texts"][0].get("value", "")
-                    else:
-                        event["summary"] = line["texts"][0]  # Om det är en sträng
+            # Sammanfoga SUMMARY (ämne + klass)
+            event["summary"] = f"{line.get('texts', [''])[0]} {', '.join([klass['name'] for klass in line.get('classes', [])])}"
 
-                if "teachers" in line and line["teachers"]:
-                    for teacher in line["teachers"]:
-                        if teacher.get("fullName") == larare:
-                            event["summary"] += f" {teacher.get('fullName', '')}"
-                            event["summary"] += f" {line.get('lessonType', '')}"
-                            event["summary"] += f" {line.get('text', '')}"
+            # Bygg DESCRIPTION
+            description_parts = []
+            if "rooms" in line and line["rooms"]:
+                description_parts.append(f"Salar: {', '.join([room['name'] for room in line['rooms']])}")
+            if "teachers" in line and line["teachers"]:
+                description_parts.append(f"Lärare: {', '.join([teacher['fullName'] for teacher in line['teachers']])}")
+            description_parts.append(f"Tid: {line.get('timeStart', '')} - {line.get('timeEnd', '')}")
+            event["description"] = " | ".join(description_parts)
 
-                events.append(event)
+            events.append(event)
 
     NNN = larare
     timestamp = datetime.now().strftime('%y%m%d_%H%M')

@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 # Konfigurera uppladdningsmappen till /tmp
 app.config['UPLOAD_FOLDER'] = '/tmp'
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', force=True)
 
 @app.route('/')
 def index():
