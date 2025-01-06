@@ -94,7 +94,7 @@ button:hover {
 
 #console {
     background-color: #2d2d2d;
-	background-image: url('/static/bilder/bg.png);
+	background-image: url('/static/bilder/bg.png');
     background-size: cover;
     background-position: center;
     color: #e0e0e0;
