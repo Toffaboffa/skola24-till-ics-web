@@ -138,20 +138,25 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare):
             for line in weeks[week][day]:
                 event = {"date": date}
                 event["end"] = line.get("timeEnd", "")
-                event["uid"] = f"{line.get('guidId', '')}-{date}-{event['start']}"
                 event["start"] = line.get("timeStart", "")
+                event["uid"] = f"{line.get('guidId', '')}-{date}-{line.get('timeStart', '0000')}"
                 event["summary"] = ""
 
+                # Sammanfoga texter om de finns
                 if "texts" in line and line["texts"]:
-                    event["summary"] = " ".join([t.get("value", "") if isinstance(t, dict) else t for t in line["texts"]])
-
+                    event["summary"] = " ".join(
+                        [t.get("value", "") if isinstance(t, dict) else t for t in line["texts"]]
+                    )
+    
+                # Lägg till lärares namn om det finns
                 if "teachers" in line and line["teachers"]:
                     teacher_names = " ".join([t.get("fullName", "") for t in line["teachers"]])
                     event["summary"] += f" {teacher_names}"
-
+    
+                # Skippa oönskade händelser
                 if not event["summary"] or "Lunch" in event["summary"] or "Rastvärd" in event["summary"]:
                     continue
-
+    
                 log_message(f"Skapar event: {event}")
                 events.append(event)
 
