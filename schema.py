@@ -100,25 +100,26 @@ def get_week(week, larare_id, s, domain, school_year, unit_guid):
         response.raise_for_status()
         data = response.json()
         log_message(f"Svar från get_week: {data}")
-        return data["data"].get("lessonInfo", [])
-    except Exception as e:
-        log_message(f"Fel vid get_week: {e}")
-        return []
-
+        
 def get_weekdata(week_nr, larare_id, s, domain, school_year, unit_guid):
     log_message(f"Hämtar veckodata för vecka {week_nr}")
     indata = get_week(week_nr, larare_id, s, domain, school_year, unit_guid)
     week = [[], [], [], [], [], [], []]  # Justera för 7 dagar i veckan
     if indata:
         for event in indata:
-            adjusted_day = adjust_day(event.get("dayOfWeekNumber", 1))  # Justera veckodagen
+            raw_day = event.get("dayOfWeekNumber", 1)  # Original dag från API:t
+            adjusted_day = adjust_day(raw_day)  # Justerad dag
+            log_message(f"Event från API: raw_day={raw_day}, adjusted_day={adjusted_day}")
             week[adjusted_day - 1].append(event)
     return week
 
 def todatestr(week, day):
-    # Använd ISO-standard för att beräkna veckor och dagar
+    """
+    Beräkna datum från vecka och veckodag enligt ISO-standard
+    """
     year = arrow.now().year
-    date = arrow.get(year, 1, 1).floor("week").shift(weeks=week - 1, days=day - 1)
+    first_week = arrow.get(year, 1, 4).floor("week")  # ISO-standard: första torsdagen definierar vecka 1
+    date = first_week.shift(weeks=week - 1, days=day - 1)
     log_message(f"Beräknar datum för vecka {week}, dag {day}: {date.format('YYYY-MM-DD')}")
     return date.format("YYYYMMDD")
 
