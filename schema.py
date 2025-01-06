@@ -156,24 +156,37 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare):
                 event["end"] = line.get("timeEnd", "")
                 event["start"] = line.get("timeStart", "")
                 event["uid"] = f"{line.get('guidId', '')}-{date}-{line.get('timeStart', '0000')}"
+                # Skapa event med uppdaterad SUMMARY och DESCRIPTION
                 event["summary"] = ""
-
+                description = []
+                
                 # Sammanfoga texter om de finns
                 if "texts" in line and line["texts"]:
-                    event["summary"] = " ".join(
-                        [t.get("value", "") if isinstance(t, dict) else t for t in line["texts"]]
-                    )
-    
+                    all_texts = [t.get("value", "") if isinstance(t, dict) else t for t in line["texts"]]
+                    # Extract first part (e.g., FY 8A) for SUMMARY
+                    event["summary"] = all_texts[0] if len(all_texts) > 0 else ""
+                    # Add remaining parts to DESCRIPTION
+                    description.extend(all_texts[1:])
+                
                 # Lägg till lärares namn om det finns
                 if "teachers" in line and line["teachers"]:
                     teacher_names = " ".join([t.get("fullName", "") for t in line["teachers"]])
-                    event["summary"] += f" {teacher_names}"
-    
+                    description.append(f"Lärare: {teacher_names}")
+                
+                # Lägg till tid och plats
+                if "timeStart" in line and "timeEnd" in line:
+                    description.append(f"Tid: {line['timeStart']} - {line['timeEnd']}")
+                if "location" in line:
+                    description.append(f"Plats: {line['location']}")
+
+                # Slå ihop DESCRIPTION
+                event["description"] = "\n".join(description)
+                
                 # Skippa oönskade händelser
                 if not event["summary"] or "Lunch" in event["summary"] or "Rastvärd" in event["summary"]:
                     continue
-    
-                log_message(f"Skapar event: {event}")
+
+                log_message(f"Skapar event: SUMMARY={event['summary']}, DESCRIPTION={event['description']}")
                 events.append(event)
 
     NNN = larare
@@ -185,15 +198,19 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare):
         with open(file_path, 'w') as f:
             f.write("BEGIN:VCALENDAR\n")
             f.write("VERSION:2.0\n")
-            f.write("PRODID:-//Your Organization//NONSGML Your Product//EN\n")
+            f.write("PRODID:-//Skola24 till ICS//https://skola24-till-ics-web.onrender.com//SV\n")
+            f.write("X-WR-CALNAME:Skola24 till ICS Kalender\n")
+            f.write("X-WR-CALDESC:Kalenderhändelser från Skola24 för lärare.\n")
             for event in events:
                 f.write("BEGIN:VEVENT\n")
                 f.write(f"SUMMARY:{event['summary']}\n")
+                f.write(f"DESCRIPTION:{event['description']}\n")
                 f.write(f"DTSTART:{todate(event['date'], event['start'])}\n")
                 f.write(f"DTEND:{todate(event['date'], event['end'])}\n")
                 f.write(f"UID:{event['uid']}\n")
                 f.write("END:VEVENT\n")
             f.write("END:VCALENDAR\n")
+
         log_message(f"ICS-fil skapad: {file_path}")
         return file_name
     except Exception as e:
