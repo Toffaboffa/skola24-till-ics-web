@@ -15,7 +15,7 @@
             consoleDiv.scrollTop = consoleDiv.scrollHeight; // Scrolla till botten
         }
 
-        function submitForm(event) {
+		    function submitForm(event) {
             event.preventDefault();
             var formData = new FormData(document.getElementById('form'));
 
@@ -27,21 +27,21 @@
             }).then(response => response.json())
             .then(data => {
                 if (data.filename) {
-                    logToConsole(`ICS-fil skapad: ${data.filename}`);
+                    logToConsole(ICS-fil skapad: ${data.filename});
                     logToConsole("Hämtar data från servern...");
 
                     // Vänta en kort stund innan vi startar nedladdningen för att ge tid för filen att bli tillgänglig
                     setTimeout(() => {
-                        window.location.href = `/download/${data.filename}`;
+                        window.location.href = /download/${data.filename};
                     }, 1000); // Vänta 1 sekund innan nedladdning
                 } else if (data.error) {
-                    logToConsole(`Fel: ${data.error}`);
+                    logToConsole(Fel: ${data.error});
                 }
             }).catch(error => {
-                logToConsole(`Fel: ${error}`);
+                logToConsole(Fel: ${error});
             });
         }
-
+		
         function clearForm() {
             var form = document.getElementById('form');
             form.reset();
