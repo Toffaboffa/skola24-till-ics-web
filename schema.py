@@ -136,7 +136,7 @@ def todate(date_str, time_str):
         time_str = time_str.replace(":", "")[:4]
     return f"{date_str}T{time_str}00Z"
 
-def geticsfor(domain, school_name, unit_guid, school_year, larare, epost):
+def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
     log_message("Startar processen för att skapa ICS-fil")
     s = requests.session()
     weeks = {}
