@@ -192,6 +192,9 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
                         room = texts[3]
                     event["room"] = room
 
+                    # Om description är tom, sätt en default
+                    event["description"] = "\n".join(description) if description else "-"
+
                 # Skippa oönskade händelser
                 excluded_keywords = ["Lunch", "Rastvärd"]
                 if not event["summary"] or any(keyword in event["summary"] for keyword in excluded_keywords):
