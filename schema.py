@@ -186,19 +186,6 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
                     if "location" in line:
                         description.append(f"Plats: {line['location']}")
 
-                    event = {
-                        "date": date,
-                        "end": line.get("timeEnd", ""),
-                        "start": line.get("timeStart", ""),
-                        "uid": f"{line.get('guidId', '')}-{date}-{line.get('timeStart', '0000')}",
-                        "summary": "",
-                        "attendee": email,
-                        "room": "Sal okänd",  # Standardvärde för room
-                    }
-                    texts = line.get("texts") or []
-                    if texts and len(texts) > 3:
-                        event["room"] = texts[3]
-
                     # Om description är tom, sätt en default
                     event["description"] = "\n".join(description) if description else "-"
 
@@ -210,7 +197,7 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
                 # Bygg korrekt LOCATION baserat på domän
                 domain_split = domain.split('.')
                 city = domain_split[0].capitalize() if domain_split else "Okänd stad"
-                event["location"] = f"{school_name}, {city}, Sverige"
+                event["location"] = f"{school_name}, {city}, Sverige, {event['room']}"
 
                 log_message(f"Skapar event: SUMMARY={event['summary']}, DESCRIPTION={event['description']}")
                 events.append(event)
@@ -249,8 +236,6 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
                 else:
                     f.write("CATEGORIES:Lektion\n")
 
-                # Lägg till ROOM
-                f.write(f"ROOM:{event['room']}\n")
                 f.write("END:VEVENT\n")
             f.write("END:VCALENDAR\n")
 
