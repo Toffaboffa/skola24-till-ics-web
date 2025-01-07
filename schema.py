@@ -169,14 +169,15 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
                     event["description"] = "Konferens"
                 else:
                     # Sammanfoga texter om de finns
-                    if "texts" in line and line["texts"]:
-                        all_texts = [t.get("value", "") if isinstance(t, dict) else t for t in line["texts"]]
+                    if texts:
+                        all_texts = [t if isinstance(t, str) else t.get("value", "") for t in texts]
                         event["summary"] = f"{all_texts[0]} {all_texts[2]}" if len(all_texts) > 2 else all_texts[0]
                         description.extend(all_texts[1:])
 
                     # Lägg till lärares namn om det finns
-                    if "teachers" in line and line["teachers"]:
-                        teacher_names = " ".join([t.get("fullName", "") for t in line["teachers"]])
+                    teachers = line.get("teachers") or []
+                    if teachers:
+                        teacher_names = " ".join([t.get("fullName", "") for t in teachers])
                         description.append(f"Lärare: {teacher_names}")
 
                     # Lägg till tid och plats
@@ -185,13 +186,21 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
                     if "location" in line:
                         description.append(f"Plats: {line['location']}")
 
-                    # Slå ihop DESCRIPTION
-                    event["description"] = "\n".join(description)
+                    # Extrahera ROOM från texts
+                    room = "Sal okänd"
+                    if len(texts) > 3:
+                        room = texts[3]
+                    event["room"] = room
 
                 # Skippa oönskade händelser
                 excluded_keywords = ["Lunch", "Rastvärd"]
                 if not event["summary"] or any(keyword in event["summary"] for keyword in excluded_keywords):
                     continue
+
+                # Bygg korrekt LOCATION baserat på domän
+                domain_split = domain.split('.')
+                city = domain_split[0].capitalize() if domain_split else "Okänd stad"
+                event["location"] = f"{school_name}, {city}, Sverige, {event['room']}"
 
                 log_message(f"Skapar event: SUMMARY={event['summary']}, DESCRIPTION={event['description']}")
                 events.append(event)
@@ -210,39 +219,13 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
             f.write("X-WR-CALNAME:Skola24 till ICS Kalender\n")
             f.write("X-WR-CALDESC:Kalenderhändelser från Skola24 för lärare.\n")
             for event in events:
-                # Extrahera subdomän från URL
-                domain = event.get('domain', 'unknown.domain')
-                subdomain = re.match(r"^([^.]+)", domain).group(1) if domain else "unknown"
-
-                # Extrahera stadsnamnet från domänen
-                city = domain.split('.')[0].capitalize()  # Ta första delen och gör den stor bokstav
-                
-                # Bygg korrekt LOCATION
-                school_location = f"{school_name}, {city}, Sverige"  # Skolans plats med stadens namn
-                event["location"] = f"{school_location}, Sal {room}"  # Lägg till salen separat
-
-
-                # Definiera kategori baserat på SUMMARY
-                if "Konferens" in event["summary"]:
-                    category = "Konferens"
-                else:
-                    category = "Lektion"
-
-               # Hantera texts och extrahera salen
-               texts = line.get("texts") or []  # Få texts eller en tom lista om texts är null
-               room = "Okänd sal"  # Standardvärde om texts är tom
-               if len(texts) > 3:
-                   room = texts[3]  # Använd texts[3] som salens namn om den finns
-               event["room"] = room  # Lägg till rummet till event
-
-
                 f.write("BEGIN:VEVENT\n")
                 f.write(f"SUMMARY:{event['summary']}\n")
                 f.write(f"DESCRIPTION:{event['description']}\n")
                 f.write(f"DTSTART:{todate(event['date'], event['start'])}\n")
                 f.write(f"DTEND:{todate(event['date'], event['end'])}\n")
                 f.write(f"UID:{event['uid']}\n")
-                f.write(f"LOCATION:{location}\n")  # Lägg till platsen
+                f.write(f"LOCATION:{event['location']}\n")  # Lägg till platsen
                 f.write(f"STATUS:CONFIRMED\n")  # Lägg till status
 
                 # Lägg till ATTENDEE från hemsidans input
@@ -251,11 +234,13 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
                     f.write(f"ATTENDEE;RSVP=TRUE;ROLE=REQ-PARTICIPANT:mailto:{attendee_email}\n")
 
                 # Lägg till kategori
-                f.write(f"CATEGORIES:{category}\n")
+                if "Konferens" in event["summary"]:
+                    f.write("CATEGORIES:Konferens\n")
+                else:
+                    f.write("CATEGORIES:Lektion\n")
 
                 # Lägg till ROOM
-                f.write(f"ROOM:{room}\n")
-
+                f.write(f"ROOM:{event['room']}\n")
                 f.write("END:VEVENT\n")
             f.write("END:VCALENDAR\n")
 
