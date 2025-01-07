@@ -45,21 +45,23 @@
             logToConsole("Formuläret har tömts.");
         }
 
-        function updateUnitGuid() {
+        function updateFields() {
             var dropdown = document.getElementById('school_dropdown');
+            var schoolNameInput = document.getElementById('school_name');
             var unitGuidInput = document.getElementById('unit_guid');
-            var selectedValue = dropdown.value;
+            var selectedOption = dropdown.options[dropdown.selectedIndex];
 
-            // Om användaren väljer ett värde från dropdown, uppdatera fältet
-            if (selectedValue !== "") {
-                unitGuidInput.value = selectedValue;
+            // Om användaren väljer ett värde från dropdown, uppdatera fälten
+            if (dropdown.value !== "") {
+                schoolNameInput.value = selectedOption.text; // Sätt skolnamnet från dropdown-texten
+                unitGuidInput.value = dropdown.value;       // Sätt Skol-ID från dropdown-värdet
             }
         }
 
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('form').addEventListener('submit', submitForm);
             document.getElementById('clearButton').addEventListener('click', clearForm);
-            document.getElementById('school_dropdown').addEventListener('change', updateUnitGuid);
+            document.getElementById('school_dropdown').addEventListener('change', updateFields);
         });
     </script>
 </head>
@@ -77,11 +79,7 @@
         <label for="domain">Domän:</label>
         <input type="text" id="domain" name="domain" required>
         <small>Exempel: gotham.skola24.se</small>
-        
-		<label for="school_name">Skola:</label>
-		<input type="text" id="school_name" name="school_name" required>
-		<small>Exempel: Gotham High</small>
-		
+
         <label for="school_dropdown">Välj en skola:</label>
         <select id="school_dropdown">
            	<option value="MzkxYTdmODAtYjJhNi1mNTRmLWJlZGEtMzhlYWVlNmU3ODFi">Ekeby skola</option>
@@ -104,6 +102,10 @@
         </select>
         <small>Om du inte vill använda dropdown, fyll i manuellt nedan.</small>
 
+        <label for="school_name">Skola:</label>
+        <input type="text" id="school_name" name="school_name" required>
+        <small>Exempel: Gotham High</small>
+
         <label for="unit_guid">Skol-ID:</label>
         <input type="text" id="unit_guid" name="unit_guid" required>
         <small>Exempel: ODBmYWIzYjotM2Yw... (48 tecken)</small>
@@ -116,9 +118,9 @@
         <input type="text" id="teacher_id" name="teacher_id" required>
         <small>Exempel: BW</small>
 		
-		<label for="email">Din e-postadress (För kalenderhändelser):</label>
-		<input type="email" id="email" name="email" required>
-		<small>Exempel: användare@domän.se</small>
+        <label for="email">Din e-postadress (För kalenderhändelser):</label>
+        <input type="email" id="email" name="email" required>
+        <small>Exempel: användare@domän.se</small>
 
         <button type="submit">Generera .ics</button>
         <button type="button" id="clearButton">Töm</button>
