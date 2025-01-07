@@ -163,7 +163,7 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
                 description = []
 
                 # Kontrollera om eventet är en konferens
-                texts = line.get("texts", [])
+                texts = line.get("texts") or []
                 if any("Konferens" in text for text in texts):
                     event["summary"] = "Konferens"
                     event["description"] = "Konferens"
