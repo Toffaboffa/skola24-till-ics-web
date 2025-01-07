@@ -214,8 +214,13 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
                 domain = event.get('domain', 'unknown.domain')
                 subdomain = re.match(r"^([^.]+)", domain).group(1) if domain else "unknown"
 
-                # Bygg LOCATION
-                location = f"{event.get('school_name', 'Okänd skola')}, {subdomain.capitalize()}, Sverige"
+                # Extrahera stadsnamnet från domänen
+                city = domain.split('.')[0].capitalize()  # Ta första delen och gör den stor bokstav
+                
+                # Bygg korrekt LOCATION
+                school_location = f"{school_name}, {city}, Sverige"  # Skolans plats med stadens namn
+                event["location"] = f"{school_location}, Sal {room}"  # Lägg till salen separat
+
 
                 # Definiera kategori baserat på SUMMARY
                 if "Konferens" in event["summary"]:
@@ -223,10 +228,13 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
                 else:
                     category = "Lektion"
 
-                # Extrahera ROOM från API-text
-                texts = event.get('texts', [])
-                room_info = texts[3] if len(texts) > 3 else "okänd"
-                room = f"Sal {room_info}" if room_info != "okänd" else "Sal okänd"
+               # Hantera texts och extrahera salen
+               texts = line.get("texts") or []  # Få texts eller en tom lista om texts är null
+               room = "Okänd sal"  # Standardvärde om texts är tom
+               if len(texts) > 3:
+                   room = texts[3]  # Använd texts[3] som salens namn om den finns
+               event["room"] = room  # Lägg till rummet till event
+
 
                 f.write("BEGIN:VEVENT\n")
                 f.write(f"SUMMARY:{event['summary']}\n")
