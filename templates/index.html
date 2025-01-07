@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Skola24 till iCal (.ics)</title>
-    <!-- Använd url_for för att referera till statiska filer -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/styles.css') }}">
     <script>
         function logToConsole(message) {
@@ -48,9 +47,21 @@
             logToConsole("Formuläret har tömts.");
         }
 
+        function updateUnitGuid() {
+            var dropdown = document.getElementById('school_dropdown');
+            var unitGuidInput = document.getElementById('unit_guid');
+            var selectedValue = dropdown.value;
+
+            // Om användaren väljer ett värde från dropdown, uppdatera fältet
+            if (selectedValue !== "") {
+                unitGuidInput.value = selectedValue;
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('form').addEventListener('submit', submitForm);
             document.getElementById('clearButton').addEventListener('click', clearForm);
+            document.getElementById('school_dropdown').addEventListener('change', updateUnitGuid);
         });
     </script>
 </head>
@@ -58,12 +69,6 @@
     <div class="header-background"></div>
     <h1>Skola24 till iCal (.ics)</h1>
     <p class="subtitle">Av Kristoffer Åberg</p>
-    <p class="intro">
-        Denna webbplats hjälper dig att generera en iCal (.ics) fil för ditt schema, för import till din kalender. 
-        Fyll i formuläret nedan med information om din stads domän, skolans namn och ID, samt årets ID. 
-        Tryck sedan på "Generera .ics" för att skapa filen. iCalendar kan användas i din kalenderapp, Outlook eller annat program som stöder iCal-formatet.
-        -- Mer här: [<a href="{{ url_for('readme') }}" target="_blank">readme</a>]
-    </p>
     <form id="form">
         <label for="domain">Domän:</label>
         <input type="text" id="domain" name="domain" required>
@@ -72,6 +77,12 @@
         <label for="school_name">Skola:</label>
         <input type="text" id="school_name" name="school_name" required>
         <small>Exempel: Gotham High</small>
+
+        <label for="school_dropdown">Välj en skola:</label>
+        <select id="school_dropdown">
+		<option value="MzkxYTdmODAtYjJhNi1mNTRmLWJlZGEtMzhlYWVlNmU3ODFi">Ekeby skola</option><option value="ODM0MzM5ZTAtOTk1Yy1mYjRiLWExODktM2RhN2U4MzQ5Y2Iz">Fylsta skola</option><option value="ZjdhNWViNzEtN2U3OS1mOTUyLWE1ZDItZDY4ZDc1MGU1OTk2">Hagaskolan</option><option value="Nzc2NzA2N2QtNzMzMy1mYjFlLTgxMjItMzFjMDZjODg4NzJk">Hardemo skola</option><option value="MDIyZmI4YjktNGVjZS1mOGI2LTkxZTItNzY1MTBjN2E5NzVl">Kumla gymnasium</option><option value="OTEwYmY1NGItZDc1OC1mMzJiLWFmMmEtODdlYTg3MjliNDdj">Kumlaby skola 7-9</option><option value="Zjc4NmVlMDUtOGUzZi1mMDk3LWJjYzEtOTMyYjE3NWE2OTAz">Kumlaby skola F-6</option><option value="OTM4NWI5OGMtMmRmZS1mMDNjLTliMWQtNzljZjYyNWFiODI1">Kumlas anpassade grundskola</option><option value="YjliNjA4OGMtZGVjNy1mZGYyLTg2NzgtN2ZiNWU3YTgwMWYy">Lillhedens skola</option><option value="NjZkNTdiNjktYjc4Ni1mYTY1LWE2YjMtNTdiMjFiNTNlODg5">Malmens skola</option><option value="YzQ1YmI1NmEtY2QyMi1mMzliLTgxZGQtZjZjMGI4OWZmM2Y3">Skogstorpsskolan 7-9</option><option value="ZGJiMWJlODAtZTI2OS1mOGY3LWEzZWItYjJiYzEwYzY2YWZj">Skogstorpsskolan F-6</option><option value="MjRiMGY2YTctYWQ5My1mMmZhLTlkNTQtYjQ1ZmY3YzY5ZTcw">Stationen</option><option value="OWJlMDkwZjctYmQ0MC1mOTQ1LWJiY2YtOGY4ZGIyZmU2MTUw">Stene skola</option><option value="ODI3NjBkM2QtMjllMi1mMTE3LWI5MTMtM2NmZmFhMzc1OTcw">Tallängens skola</option><option value="ODBmYWIzYjgtM2YwYi1mNjIzLTlmZmMtMjhjZWI0ZTVhZGE0">Vialundsskolan</option><option value="MzFhNGFmMTMtMTU0OC1mYWYyLWJkNGYtZWIxNzUyZTY3YmJi">Vuxenutbildningen</option></select> till alla skolor här -->
+        </select>
+        <small>Om du inte vill använda dropdown, fyll i manuellt nedan.</small>
 
         <label for="unit_guid">Skol-ID (unit_guid):</label>
         <input type="text" id="unit_guid" name="unit_guid" required>
