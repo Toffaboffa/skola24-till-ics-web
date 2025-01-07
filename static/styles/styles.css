@@ -1,5 +1,5 @@
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Lexend', Arial, sans-serif;
     margin: 0;
     padding: 0;
     background-color: #f4f4f4;
@@ -66,6 +66,7 @@ input {
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 0.8em; /* Minskat textstorlek */
+	font-family: 'Lexend', Arial, sans-serif;
 }
 
 small {
@@ -86,6 +87,7 @@ button {
     cursor: pointer;
     font-size: 12px; /* Minskat textstorlek */
     margin-right: 5px;
+	font-family: 'Lexend', Arial, sans-serif;
 }
 
 button:hover {
