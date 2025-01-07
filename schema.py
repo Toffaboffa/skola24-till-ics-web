@@ -186,11 +186,18 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
                     if "location" in line:
                         description.append(f"Plats: {line['location']}")
 
-                    # Extrahera ROOM från texts
-                    room = "Sal okänd"
-                    if len(texts) > 3:
-                        room = texts[3]
-                    event["room"] = room
+                    event = {
+                        "date": date,
+                        "end": line.get("timeEnd", ""),
+                        "start": line.get("timeStart", ""),
+                        "uid": f"{line.get('guidId', '')}-{date}-{line.get('timeStart', '0000')}",
+                        "summary": "",
+                        "attendee": email,
+                        "room": "Sal okänd",  # Standardvärde för room
+                    }
+                    texts = line.get("texts") or []
+                    if texts and len(texts) > 3:
+                        event["room"] = texts[3]
 
                     # Om description är tom, sätt en default
                     event["description"] = "\n".join(description) if description else "-"
