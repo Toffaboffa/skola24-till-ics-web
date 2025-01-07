@@ -27,9 +27,7 @@
             }).then(response => response.json())
             .then(data => {
                 if (data.filename) {
-                    logToConsole(ICS-fil skapad: ${data.filename});
                     logToConsole("Hämtar data från servern...");
-
                     // Vänta en kort stund innan vi startar nedladdningen för att ge tid för filen att bli tillgänglig
                     setTimeout(() => {
                         window.location.href = /download/${data.filename};
