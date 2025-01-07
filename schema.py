@@ -197,7 +197,7 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
                 # Bygg korrekt LOCATION baserat på domän
                 domain_split = domain.split('.')
                 city = domain_split[0].capitalize() if domain_split else "Okänd stad"
-                event["location"] = f"{school_name}, {city}, Sverige, {event['room']}"
+                event["location"] = f"{school_name}, {city}, Sverige"
 
                 log_message(f"Skapar event: SUMMARY={event['summary']}, DESCRIPTION={event['description']}")
                 events.append(event)
