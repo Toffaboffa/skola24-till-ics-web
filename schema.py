@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 import arrow
 from datetime import datetime
@@ -133,7 +134,7 @@ def todatestr(week, day):
 def todate(date_str, time_str):
     if ":" in time_str:
         time_str = time_str.replace(":", "")[:4]
-    return f"{date_str}T{time_str}Z"
+    return f"{date_str}T{time_str}00Z"
 
 def geticsfor(domain, school_name, unit_guid, school_year, larare):
     log_message("Startar processen för att skapa ICS-fil")
@@ -144,51 +145,57 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare):
         log_message("Ingen lärar-ID mottagen")
         return None
 
+    # Hämta data för alla veckor
     for week in range(1, 53):
         weeks[week] = get_weekdata(week, larare_id, s, domain, school_year, unit_guid)
 
     events = []
     for week in weeks:
-        for day in range(5):
+        for day in range(5):  # Måndag till fredag
             date = todatestr(week, day + 2)
             for line in weeks[week][day]:
                 event = {"date": date}
                 event["end"] = line.get("timeEnd", "")
                 event["start"] = line.get("timeStart", "")
                 event["uid"] = f"{line.get('guidId', '')}-{date}-{line.get('timeStart', '0000')}"
-                # Skapa event med uppdaterad SUMMARY och DESCRIPTION
                 event["summary"] = ""
                 description = []
-                
-                # Sammanfoga texter om de finns
-                if "texts" in line and line["texts"]:
-                    all_texts = [t.get("value", "") if isinstance(t, dict) else t for t in line["texts"]]
-                    # Uppdaterad SUMMARY med Lektion + Grupp
-                    event["summary"] = f"{all_texts[0]} {all_texts[2]}" if len(all_texts) > 2 else all_texts[0]
-                    # Add remaining parts to DESCRIPTION
-                    description.extend(all_texts[1:])
 
-                # Lägg till lärares namn om det finns
-                if "teachers" in line and line["teachers"]:
-                    teacher_names = " ".join([t.get("fullName", "") for t in line["teachers"]])
-                    description.append(f"Lärare: {teacher_names}")
-                
-                # Lägg till tid och plats
-                if "timeStart" in line and "timeEnd" in line:
-                    description.append(f"Tid: {line['timeStart']} - {line['timeEnd']}")
-                if "location" in line:
-                    description.append(f"Plats: {line['location']}")
+                # Kontrollera om eventet är en konferens
+                texts = line.get("texts", [])
+                if any("Konferens" in text for text in texts):
+                    event["summary"] = "Konferens"
+                    event["description"] = "Konferens"
+                else:
+                    # Sammanfoga texter om de finns
+                    if "texts" in line and line["texts"]:
+                        all_texts = [t.get("value", "") if isinstance(t, dict) else t for t in line["texts"]]
+                        event["summary"] = f"{all_texts[0]} {all_texts[2]}" if len(all_texts) > 2 else all_texts[0]
+                        description.extend(all_texts[1:])
 
-                # Slå ihop DESCRIPTION
-                event["description"] = "\n".join(description)
-                
+                    # Lägg till lärares namn om det finns
+                    if "teachers" in line and line["teachers"]:
+                        teacher_names = " ".join([t.get("fullName", "") for t in line["teachers"]])
+                        description.append(f"Lärare: {teacher_names}")
+
+                    # Lägg till tid och plats
+                    if "timeStart" in line and "timeEnd" in line:
+                        description.append(f"Tid: {line['timeStart']} - {line['timeEnd']}")
+                    if "location" in line:
+                        description.append(f"Plats: {line['location']}")
+
+                    # Slå ihop DESCRIPTION
+                    event["description"] = "\n".join(description)
+
                 # Skippa oönskade händelser
-                if not event["summary"] or "Lunch" in event["summary"] or "Rastvärd" in event["summary"]:
+                excluded_keywords = ["Lunch", "Rastvärd"]
+                if not event["summary"] or any(keyword in event["summary"] for keyword in excluded_keywords):
                     continue
 
                 log_message(f"Skapar event: SUMMARY={event['summary']}, DESCRIPTION={event['description']}")
                 events.append(event)
 
+    # Skapa ICS-fil
     NNN = larare
     timestamp = datetime.now().strftime('%y%m%d_%H%M')
     file_name = f"schema_{NNN}_{timestamp}.ics"
@@ -202,12 +209,44 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare):
             f.write("X-WR-CALNAME:Skola24 till ICS Kalender\n")
             f.write("X-WR-CALDESC:Kalenderhändelser från Skola24 för lärare.\n")
             for event in events:
+                # Extrahera subdomän från URL
+                domain = event.get('domain', 'unknown.domain')
+                subdomain = re.match(r"^([^.]+)", domain).group(1) if domain else "unknown"
+
+                # Bygg LOCATION
+                location = f"{event.get('school_name', 'Okänd skola')}, {subdomain.capitalize()}, Sverige"
+
+                # Definiera kategori baserat på SUMMARY
+                if "Konferens" in event["summary"]:
+                    category = "Konferens"
+                else:
+                    category = "Lektion"
+
+                # Extrahera ROOM från API-text
+                texts = event.get('texts', [])
+                room_info = texts[3] if len(texts) > 3 else "okänd"
+                room = f"Sal {room_info}" if room_info != "okänd" else "Sal okänd"
+
                 f.write("BEGIN:VEVENT\n")
                 f.write(f"SUMMARY:{event['summary']}\n")
                 f.write(f"DESCRIPTION:{event['description']}\n")
                 f.write(f"DTSTART:{todate(event['date'], event['start'])}\n")
                 f.write(f"DTEND:{todate(event['date'], event['end'])}\n")
                 f.write(f"UID:{event['uid']}\n")
+                f.write(f"LOCATION:{location}\n")  # Lägg till platsen
+                f.write(f"STATUS:CONFIRMED\n")  # Lägg till status
+
+                # Lägg till ATTENDEE från hemsidans input
+                attendee_email = event.get('attendee', '')  # Anta att detta är nyckeln för input
+                if attendee_email:
+                    f.write(f"ATTENDEE;RSVP=TRUE;ROLE=REQ-PARTICIPANT:mailto:{attendee_email}\n")
+
+                # Lägg till kategori
+                f.write(f"CATEGORIES:{category}\n")
+
+                # Lägg till ROOM
+                f.write(f"ROOM:{room}\n")
+
                 f.write("END:VEVENT\n")
             f.write("END:VCALENDAR\n")
 

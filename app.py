@@ -24,11 +24,12 @@ def generate():
     unit_guid = request.form['unit_guid']
     school_year = request.form['school_year']
     teacher_id = request.form['teacher_id']
+    email = request.form['email']
 
     logging.info(f'Skapar ICS-fil för {teacher_id}...')
 
     # Generera ICS-fil
-    ics_filename = geticsfor(domain, school_name, unit_guid, school_year, teacher_id)
+    ics_filename = geticsfor(domain, school_name, unit_guid, school_year, teacher_id, email)
     if not ics_filename:
         logging.error(f"Misslyckades med att skapa ICS-fil för {teacher_id}.")
         return jsonify({'error': 'Misslyckades med att skapa ICS-fil'}), 500
