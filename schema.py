@@ -159,6 +159,7 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, epost):
                 event["start"] = line.get("timeStart", "")
                 event["uid"] = f"{line.get('guidId', '')}-{date}-{line.get('timeStart', '0000')}"
                 event["summary"] = ""
+                event["attendee"] = email
                 description = []
 
                 # Kontrollera om eventet är en konferens
@@ -237,7 +238,7 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, epost):
                 f.write(f"STATUS:CONFIRMED\n")  # Lägg till status
 
                 # Lägg till ATTENDEE från hemsidans input
-                attendee_email = event.get('attendee', '')  # Anta att detta är nyckeln för input
+                attendee_email = event.get('attendee', '')
                 if attendee_email:
                     f.write(f"ATTENDEE;RSVP=TRUE;ROLE=REQ-PARTICIPANT:mailto:{attendee_email}\n")
 
