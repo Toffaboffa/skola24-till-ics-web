@@ -132,9 +132,12 @@ def todatestr(week, day):
     return date.format("YYYYMMDD")
 
 def todate(date_str, time_str):
+
     if ":" in time_str:
-        time_str = time_str.replace(":", "")[:4]
-    return f"{date_str}T{time_str}00Z"
+        time_str = time_str.replace(":", "")[:4]  # Rensa bort kolon
+    local_time = arrow.get(f"{date_str}T{time_str}", "YYYYMMDDTHHmm").replace(tzinfo="Europe/Stockholm")
+    utc_time = local_time.to("utc")  # Konvertera till UTC
+    return utc_time.format("YYYYMMDDTHHmm00Z")
 
 def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
     log_message("Startar processen för att skapa ICS-fil")
@@ -213,7 +216,7 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
             f.write("BEGIN:VCALENDAR\n")
             f.write("VERSION:2.0\n")
             f.write("PRODID:-//Skola24 till ICS//https://skola24-till-ics-web.onrender.com//SV\n")
-            f.write("X-WR-CALNAME:Skola24 till ICS Kalender\n")
+            f.write("X-WR-CALNAME:Schema\n")
             f.write("X-WR-CALDESC:Kalenderhändelser från Skola24 för lärare.\n")
             for event in events:
                 f.write("BEGIN:VEVENT\n")
