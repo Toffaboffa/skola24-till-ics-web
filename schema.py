@@ -138,6 +138,58 @@ def todate(date_str, time_str):
     local_time = arrow.get(f"{date_str}T{time_str}", "YYYYMMDDTHHmm").replace(tzinfo="Europe/Stockholm")
     utc_time = local_time.to("utc")  # Konvertera till UTC
     return utc_time.format("YYYYMMDDTHHmm00Z")
+    
+def categorize_event(event_summary):
+    """
+    Tilldela kategorier till event baserat på dess summary.
+    """
+    kategorier = []
+
+    mapping = {
+        # Lektioner
+        "EN": ["Engelska", "Kärnämne", "Undervisning", "Lektion"],
+        "SV:SVA": ["Svenska", "Svenska som andraspråk", "Kärnämne", "Undervisning", "Lektion"],
+        "SL": ["Slöjd", "PREST-ämnen", "Undervisning", "Lektion"],
+        "MU": ["Musik", "PREST-ämnen", "Undervisning", "Lektion"],
+        "FY": ["Fysik", "NO-ämnen", "Undervisning", "Lektion"],
+        "MENTORSTID": ["Mentorstid"],
+        "Coachsamtal": ["Coachsamtal"],
+        "TK": ["Teknik", "NO-ämnen", "Undervisning", "Lektion"],
+        "BI:KE": ["Biologi / Kemi", "Biologi", "Kemi", "NO-ämnen", "Undervisning", "Lektion"],
+        "HKK": ["Hem- & Konsumentkunskap", "PREST-ämnen", "Undervisning", "Lektion"],
+        "BL": ["Bild", "PREST-ämnen", "Undervisning", "Lektion"],
+        "M2EN:M2SV:M2SVA": ["Språkval", "Svenska / Engelska", "Undervisning", "Lektion"],
+        "M2FRA": ["Språkval", "Franska", "Undervisning", "Lektion"],
+        "M2SPA": ["Språkval", "Spanska", "Undervisning", "Lektion"],
+        "M2DEU": ["Språkval", "Tyska", "Undervisning", "Lektion"],
+        "Ma": ["Matematik", "Kärnämne", "Undervisning", "Lektion"],
+        "HI:RE": ["Historia / Religion", "Historia", "Religion", "SO-ämnen", "Undervisning", "Lektion"],
+        "GE:SH": ["Geografi / Religion", "Geografi", "Religion", "SO-ämne", "Undervisning", "Lektion"],
+        "IDH": ["Idrott & Hälsa", "Undervisning", "Lektion"],
+        "PULS": ["Puls", "Undervisning", "Lektion"],
+        "Enskild elev": ["Enskild undervisning", "Undervisning", "Lektion"],
+        "Extra Studietid": ["Undervisning", "Lektion"],
+
+        # Ej lektioner
+        "Ledningsgrupp": ["Ledningsgrupp", "Konferens", "Övrig tid"],
+        "Konferens": ["Konferens", "Övrig tid"],
+        "Mentorspar": ["Mentorspar", "Konferens", "Övrig tid"],
+        "Planeringstid": ["Planering", "Övrig tid"],
+        "Planering": ["Planering", "Övrig tid"],
+        "Facklig tid": ["Konferens", "Övrig tid"]
+    }
+
+    # Tilldela kategorier baserat på mapping
+    if event_summary in mapping:
+        kategorier.extend(mapping[event_summary])
+    else:
+        kategorier = ["Övrig tid"]
+
+    # Säkerställ att "Lektion" inte finns för ej-lektioner
+    if "Övrig tid" in kategorier and "Lektion" in kategorier:
+        kategorier.remove("Lektion")
+
+    return kategorier
 
 def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
     log_message("Startar processen för att skapa ICS-fil")
@@ -196,7 +248,10 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
                 excluded_keywords = ["Lunch", "Rastvärd"]
                 if not event["summary"] or any(keyword in event["summary"] for keyword in excluded_keywords):
                     continue
-
+                # Tilldela kategorier baserat på händelsetyp
+                event["categories"] = categorize_event(event["summary"])
+                log_message(f"Event {event['summary']}: Kategorier tilldelade {event['categories']}")
+                
                 # Bygg korrekt LOCATION baserat på domän
                 domain_split = domain.split('.')
                 city = domain_split[0].capitalize() if domain_split else "Okänd stad"
@@ -234,10 +289,7 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
                     f.write(f"ATTENDEE;RSVP=TRUE;ROLE=REQ-PARTICIPANT:mailto:{attendee_email}\n")
 
                 # Lägg till kategori
-                if "Konferens" in event["summary"]:
-                    f.write("CATEGORIES:Konferens\n")
-                else:
-                    f.write("CATEGORIES:Lektion\n")
+                f.write(f"CATEGORIES:{','.join(event['categories'])}\n")
 
                 f.write("END:VEVENT\n")
             f.write("END:VCALENDAR\n")
