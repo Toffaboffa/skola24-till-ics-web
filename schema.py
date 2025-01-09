@@ -139,55 +139,55 @@ def todate(date_str, time_str):
     utc_time = local_time.to("utc")  # Konvertera till UTC
     return utc_time.format("YYYYMMDDTHHmm00Z")
     
-def categorize_event(event_summary):
+def categorize_event(texts):
     """
-    Tilldela kategorier till event baserat på dess summary.
+    Tilldela kategorier baserat på den första delen av 'texts' från API-svaret.
     """
     kategorier = []
 
+    # Mappning baserad på ämne
     mapping = {
-        # Lektioner
         "EN": ["Engelska", "Kärnämne", "Undervisning", "Lektion"],
-        "SV:SVA": ["Svenska", "Svenska som andraspråk", "Kärnämne", "Undervisning", "Lektion"],
+        "SV": ["Svenska", "Kärnämne", "Undervisning", "Lektion"],
+        "SVA": ["Svenska som andraspråk", "Kärnämne", "Undervisning", "Lektion"],
         "SL": ["Slöjd", "PREST-ämnen", "Undervisning", "Lektion"],
         "MU": ["Musik", "PREST-ämnen", "Undervisning", "Lektion"],
         "FY": ["Fysik", "NO-ämnen", "Undervisning", "Lektion"],
         "MENTORSTID": ["Mentorstid"],
         "Coachsamtal": ["Coachsamtal"],
         "TK": ["Teknik", "NO-ämnen", "Undervisning", "Lektion"],
-        "BI:KE": ["Biologi / Kemi", "Biologi", "Kemi", "NO-ämnen", "Undervisning", "Lektion"],
+        "BI": ["Biologi", "NO-ämnen", "Undervisning", "Lektion"],
+        "KE": ["Kemi", "NO-ämnen", "Undervisning", "Lektion"],
         "HKK": ["Hem- & Konsumentkunskap", "PREST-ämnen", "Undervisning", "Lektion"],
         "BL": ["Bild", "PREST-ämnen", "Undervisning", "Lektion"],
-        "M2EN:M2SV:M2SVA": ["Språkval", "Svenska / Engelska", "Undervisning", "Lektion"],
         "M2FRA": ["Språkval", "Franska", "Undervisning", "Lektion"],
         "M2SPA": ["Språkval", "Spanska", "Undervisning", "Lektion"],
         "M2DEU": ["Språkval", "Tyska", "Undervisning", "Lektion"],
         "Ma": ["Matematik", "Kärnämne", "Undervisning", "Lektion"],
-        "HI:RE": ["Historia / Religion", "Historia", "Religion", "SO-ämnen", "Undervisning", "Lektion"],
-        "GE:SH": ["Geografi / Religion", "Geografi", "Religion", "SO-ämne", "Undervisning", "Lektion"],
+        "HI": ["Historia", "SO-ämnen", "Undervisning", "Lektion"],
+        "RE": ["Religion", "SO-ämnen", "Undervisning", "Lektion"],
+        "GE": ["Geografi", "SO-ämnen", "Undervisning", "Lektion"],
+        "SH": ["Samhällskunskap", "SO-ämnen", "Undervisning", "Lektion"],
         "IDH": ["Idrott & Hälsa", "Undervisning", "Lektion"],
         "PULS": ["Puls", "Undervisning", "Lektion"],
-        "Enskild elev": ["Enskild undervisning", "Undervisning", "Lektion"],
-        "Extra Studietid": ["Undervisning", "Lektion"],
-
-        # Ej lektioner
-        "Ledningsgrupp": ["Ledningsgrupp", "Konferens", "Övrig tid"],
         "Konferens": ["Konferens", "Övrig tid"],
-        "Mentorspar": ["Mentorspar", "Konferens", "Övrig tid"],
         "Planeringstid": ["Planering", "Övrig tid"],
         "Planering": ["Planering", "Övrig tid"],
-        "Facklig tid": ["Konferens", "Övrig tid"]
+        "Facklig tid": ["Konferens", "Övrig tid"],
     }
 
-    # Tilldela kategorier baserat på mapping
-    if event_summary in mapping:
-        kategorier.extend(mapping[event_summary])
+    # Kontrollera att 'texts' är en lista och har minst ett element
+    if texts and isinstance(texts, list):
+        subject = texts[0]  # Första delen av texts
+        if subject in mapping:
+            kategorier = mapping[subject]
+            log_message(f"Ämne '{subject}' matchade kategorier: {kategorier}")
+        else:
+            kategorier = ["Övrig tid"]
+            log_message(f"Ämne '{subject}' hittades INTE i mapping. Tilldelar 'Övrig tid'.")
     else:
         kategorier = ["Övrig tid"]
-
-    # Säkerställ att "Lektion" inte finns för ej-lektioner
-    if "Övrig tid" in kategorier and "Lektion" in kategorier:
-        kategorier.remove("Lektion")
+        log_message("Felaktig 'texts' från API. Tilldelar 'Övrig tid'.")
 
     return kategorier
 
@@ -248,10 +248,11 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
                 excluded_keywords = ["Lunch", "Rastvärd"]
                 if not event["summary"] or any(keyword in event["summary"] for keyword in excluded_keywords):
                     continue
+                    
                 # Tilldela kategorier baserat på händelsetyp
-                event["categories"] = categorize_event(event["summary"])
-                log_message(f"Event {event['summary']}: Kategorier tilldelade {event['categories']}")
-                
+                event["categories"] = categorize_event(line.get("texts"))
+                log_message(f"TEXTS {line.get('texts')} gav kategorier: {event['categories']}")
+
                 # Bygg korrekt LOCATION baserat på domän
                 domain_split = domain.split('.')
                 city = domain_split[0].capitalize() if domain_split else "Okänd stad"
