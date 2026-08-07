@@ -6,7 +6,7 @@ import re
 import time
 import uuid
 
-from schema import geticsfor, get_active_school_year, normalize_domain
+from schema import get_active_school_year, normalize_domain
 from selection import prepare_schedule, write_ics
 
 app = Flask(__name__)
@@ -177,7 +177,7 @@ def generate_selected():
 
 @app.route('/generate', methods=['POST'])
 def generate():
-    """Bakåtkompatibel direktgenerering som tar med alla poster."""
+    """Bakåtkompatibel direktgenerering som tar med alla exporterbara poster."""
     domain, school_name, unit_guid, school_year_id, teacher_id, email = _form_values()
 
     if not all([domain, school_name, unit_guid, teacher_id, email]):
@@ -188,9 +188,10 @@ def generate():
         if not school_year_id:
             return jsonify({'error': 'Skola24 returnerade inget år-ID.'}), 502
 
-        ics_filename = geticsfor(
+        prepared = prepare_schedule(
             domain, school_name, unit_guid, school_year_id, teacher_id, email
         )
+        ics_filename = write_ics(prepared['events'], teacher_id)
         if not ics_filename:
             return jsonify({'error': 'Misslyckades med att skapa ICS-fil'}), 500
         return jsonify({'filename': ics_filename})
