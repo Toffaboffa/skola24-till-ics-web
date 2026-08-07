@@ -7,6 +7,69 @@ import requests
 import schema
 
 
+CATEGORY_MAPPING = {
+    'EN': ['Engelska', 'Kärnämne', 'Undervisning', 'Lektion'],
+    'SV': ['Svenska', 'Kärnämne', 'Undervisning', 'Lektion'],
+    'SVA': ['Svenska som andraspråk', 'Kärnämne', 'Undervisning', 'Lektion'],
+    'SL': ['Slöjd', 'PREST-ämnen', 'Undervisning', 'Lektion'],
+    'MU': ['Musik', 'PREST-ämnen', 'Undervisning', 'Lektion'],
+    'FY': ['Fysik', 'NO-ämnen', 'Undervisning', 'Lektion'],
+    'MENTORSTID': ['Mentorstid'],
+    'Coachsamtal': ['Coachsamtal'],
+    'TK': ['Teknik', 'NO-ämnen', 'Undervisning', 'Lektion'],
+    'BI': ['Biologi', 'NO-ämnen', 'Undervisning', 'Lektion'],
+    'KE': ['Kemi', 'NO-ämnen', 'Undervisning', 'Lektion'],
+    'HKK': ['Hem- & Konsumentkunskap', 'PREST-ämnen', 'Undervisning', 'Lektion'],
+    'BL': ['Bild', 'PREST-ämnen', 'Undervisning', 'Lektion'],
+    'M2FRA': ['Språkval', 'Franska', 'Undervisning', 'Lektion'],
+    'M2SPA': ['Språkval', 'Spanska', 'Undervisning', 'Lektion'],
+    'M2DEU': ['Språkval', 'Tyska', 'Undervisning', 'Lektion'],
+    'Ma': ['Matematik', 'Kärnämne', 'Undervisning', 'Lektion'],
+    'MA': ['Matematik', 'Kärnämne', 'Undervisning', 'Lektion'],
+    'HI': ['Historia', 'SO-ämnen', 'Undervisning', 'Lektion'],
+    'RE': ['Religion', 'SO-ämnen', 'Undervisning', 'Lektion'],
+    'GE': ['Geografi', 'SO-ämnen', 'Undervisning', 'Lektion'],
+    'SH': ['Samhällskunskap', 'SO-ämnen', 'Undervisning', 'Lektion'],
+    'IDH': ['Idrott & Hälsa', 'Undervisning', 'Lektion'],
+    'PULS': ['Puls', 'Undervisning', 'Lektion'],
+    'Konferens': ['Konferens', 'Övrig tid'],
+    'Planeringstid': ['Planering', 'Övrig tid'],
+    'Planering': ['Planering', 'Övrig tid'],
+    'Facklig tid': ['Konferens', 'Övrig tid'],
+    'BI:KE': ['Biologi & Kemi', 'NO-ämnen', 'Undervisning', 'Lektion'],
+    'SV:SVA': ['Svenska/SVA', 'Kärnämne', 'Undervisning', 'Lektion'],
+    'GE:SH': ['Geografi & Samhällskunskap', 'SO-ämnen', 'Undervisning', 'Lektion'],
+    'HI:RE': ['Historia & Religion', 'SO-ämnen', 'Undervisning', 'Lektion'],
+    'GE:HI:RE:SH': ['SO-ämnen', 'Undervisning', 'Lektion'],
+    'M2EN': ['Språkval', 'Engelska', 'Undervisning', 'Lektion'],
+    'M2SV:M2SVA': ['Språkval', 'Svenska/SVA', 'Undervisning', 'Lektion'],
+    'M2SV:M2SVA:SV:SVA': ['Svenska/SVA', 'Språkval', 'Undervisning', 'Lektion'],
+    'SLtm': ['Träslöjd', 'PREST-ämnen', 'Undervisning', 'Lektion'],
+    'SLtx': ['Textilslöjd', 'PREST-ämnen', 'Undervisning', 'Lektion'],
+    'Enskild elev': ['Elevstöd', 'Undervisning'],
+    'Förstelärarträff': ['Förstelärarträff', 'Övrig tid'],
+    'Hkk IM': ['Hem- & Konsumentkunskap', 'PREST-ämnen', 'Undervisning', 'Lektion'],
+    'Hkk-malmen': ['Hem- & Konsumentkunskap', 'PREST-ämnen', 'Undervisning', 'Lektion'],
+    'Hkk-stene': ['Hem- & Konsumentkunskap', 'PREST-ämnen', 'Undervisning', 'Lektion'],
+    'IT-support': ['IT-support', 'Övrig tid'],
+    'Kollegialt lärande': ['Kollegialt lärande', 'Övrig tid'],
+    'Kärnämne en': ['Engelska', 'Kärnämne', 'Undervisning', 'Lektion'],
+    'Kärnämne ma': ['Matematik', 'Kärnämne', 'Undervisning', 'Lektion'],
+    'Ledningsgrupp': ['Ledningsgrupp', 'Övrig tid'],
+    'Lunch': ['Lunch'],
+    'Mentorspar': ['Mentorspar', 'Övrig tid'],
+    'MVP': ['MVP', 'Övrig tid'],
+    'Måndagsinfo': ['Måndagsinfo', 'Konferens', 'Övrig tid'],
+    'Studiestöd simning': ['Studiestöd', 'Undervisning'],
+    'Studietid': ['Studietid', 'Undervisning'],
+    'Ämnestid': ['Ämnestid', 'Övrig tid'],
+}
+
+_CATEGORY_MAPPING_CASEFOLD = {
+    key.casefold(): value for key, value in CATEGORY_MAPPING.items()
+}
+
+
 def _text_values(texts):
     values = []
     for item in texts or []:
@@ -17,6 +80,15 @@ def _text_values(texts):
         else:
             values.append(str(item).strip())
     return values
+
+
+def categories_for_line(line):
+    values = _text_values(line.get('texts'))
+    subject = values[0] if values else ''
+    categories = _CATEGORY_MAPPING_CASEFOLD.get(subject.casefold())
+    if categories:
+        return list(categories)
+    return ['Övrig tid']
 
 
 def _clean_group_label(subject, group):
@@ -81,6 +153,13 @@ def duration_minutes(start_time, end_time):
 
 
 def _build_event(line, event_date, week, email, school_name, domain):
+    values = _text_values(line.get('texts'))
+    subject = values[0] if values else ''
+
+    # Ramtid ska aldrig exporteras till ICS eller visas som val i popupen.
+    if subject.casefold() == 'ramtid':
+        return None
+
     event = {
         'date': event_date,
         'end': line.get('timeEnd', ''),
@@ -90,7 +169,6 @@ def _build_event(line, event_date, week, email, school_name, domain):
         'attendee': email,
     }
     description = []
-    values = _text_values(line.get('texts'))
 
     if any('konferens' in text.lower() for text in values):
         event['summary'] = 'Konferens'
@@ -117,7 +195,7 @@ def _build_event(line, event_date, week, email, school_name, domain):
     if any(keyword in event['summary'].lower() for keyword in ('lunch', 'rastvärd')):
         return None
 
-    event['categories'] = schema.categorize_event(line.get('texts'))
+    event['categories'] = categories_for_line(line)
     city = domain.split('.')[0].capitalize() if domain else 'Okänd stad'
     event['location'] = f'{school_name}, {city}, Sverige'
 
@@ -213,7 +291,18 @@ def _ics_escape(value):
     return value.replace('\\', '\\\\').replace('\n', '\\n').replace(',', '\\,').replace(';', '\\;')
 
 
+def _is_ramtid_event(event):
+    filter_key = str(event.get('filter_key', ''))
+    subject = filter_key.split('\x1f', 1)[0].strip()
+    if subject:
+        return subject.casefold() == 'ramtid'
+    return str(event.get('summary', '')).strip().casefold().startswith('ramtid')
+
+
 def write_ics(events, teacher, selected_keys=None):
+    # Filtrera defensivt även här, så äldre cachedata aldrig kan exportera Ramtid.
+    events = [event for event in events if not _is_ramtid_event(event)]
+
     selected = set(selected_keys) if selected_keys is not None else None
     if selected is not None:
         events = [event for event in events if event.get('filter_key') in selected]
