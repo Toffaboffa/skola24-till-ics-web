@@ -32,6 +32,73 @@ hdata = {
 def generate_referer(domain, school_name):
     return f"https://web.skola24.se/timetable/timetable-viewer/{domain}/{school_name}/"
 
+def normalize_domain(domain):
+    """Normalisera en Skola24-domän som skrivits in av användaren."""
+    domain = (domain or "").strip()
+    domain = re.sub(r"^https?://", "", domain, flags=re.IGNORECASE)
+    domain = domain.split("/", 1)[0].strip().rstrip(".")
+    return domain.lower()
+
+def get_active_school_year(domain, school_name=""):
+    """
+    Hämta aktuellt aktivt läsår direkt från Skola24.
+
+    Returnerar objektet från activeSchoolYears, till exempel:
+    {"guid": "...", "name": "Innevarande",
+     "from": "2026-07-01T00:00:00", "to": "2027-06-30T00:00:00"}
+    """
+    domain = normalize_domain(domain)
+    school_name = (school_name or "").strip()
+
+    if not domain:
+        raise ValueError("Ingen Skola24-domän angavs.")
+
+    session = requests.Session()
+    headers = hdata.copy()
+
+    # Efterlikna webbläsarens flöde och etablera session mot rätt viewer-sida.
+    # Years-endpointen brukar fungera ändå, men detta gör anropet robustare.
+    if school_name:
+        referer = generate_referer(domain, school_name)
+        headers["Referer"] = referer
+        try:
+            session.get(referer, headers=headers, timeout=15)
+        except requests.RequestException as exc:
+            log_message(f"Kunde inte förladda Skola24-sidan: {exc}")
+
+    response = session.post(
+        "https://web.skola24.se/api/get/active/school/years",
+        headers=headers,
+        json={
+            "hostName": domain,
+            "checkSchoolYearsFeatures": False,
+        },
+        timeout=20,
+    )
+    response.raise_for_status()
+
+    payload = response.json()
+    years = payload.get("data", {}).get("activeSchoolYears", [])
+    if not years:
+        raise RuntimeError("Skola24 returnerade inga aktiva läsår.")
+
+    # Om flera läsår mot förmodan returneras väljer vi det som omfattar dagens
+    # datum. Annars används första posten, vilket är samma rimliga fallback som
+    # Skola24-viewern själv i praktiken ger oss via listordningen.
+    today = arrow.now("Europe/Stockholm").date()
+    for item in years:
+        try:
+            start = datetime.fromisoformat(item["from"]).date()
+            end = datetime.fromisoformat(item["to"]).date()
+            if start <= today <= end:
+                log_message(f"Aktivt läsår valt: {item}")
+                return item
+        except (KeyError, TypeError, ValueError):
+            continue
+
+    log_message(f"Inget läsår matchade dagens datum; använder första: {years[0]}")
+    return years[0]
+
 def get_id_for(larare, s):
     log_message("Startar funktionen get_id_for")
     try:
@@ -195,7 +262,9 @@ def todate(date_str, time_str):
         time_str = time_str.replace(":", "")[:4]  # Rensa bort kolon
     local_time = arrow.get(f"{date_str}T{time_str}", "YYYYMMDDTHHmm").replace(tzinfo="Europe/Stockholm")
     utc_time = local_time.to("utc")  # Konvertera till UTC
-    return utc_time.format("YYYYMMDDTHHmm00Z")
+    # iCalendar kräver bokstaven Z för UTC DATE-TIME; numeriska offset som +0000
+    # ska inte användas i DTSTART/DTEND.
+    return utc_time.format("YYYYMMDDTHHmmss") + "Z"
     
 def categorize_event(texts):
     """
@@ -335,6 +404,11 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
 
                 log_message(f"Skapar event: SUMMARY={event['summary']}, DESCRIPTION={event['description']}")
                 events.append(event)
+
+    # Veckorna hämtas i nummerordning (1..52), vilket annars placerar VT före HT
+    # i själva filen. Kalenderprogram sorterar normalt själva, men en kronologisk
+    # ICS är enklare att kontrollera och mer förutsägbar att importera.
+    events.sort(key=lambda event: (event["date"], event.get("start", "")))
 
     # Skapa ICS-fil
     NNN = larare
