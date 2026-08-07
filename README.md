@@ -50,11 +50,12 @@ Användning
 1. Öppna din webbläsare och navigera till `http://127.0.0.1:5000/`.
 2. Fyll i de fält som efterfrågas:
 
-   - Domän:			ex. kumla.skola24.se
-   - Skola: 			ex. Vialundskolan
-   - Skol-ID (unit_guid): 	ex. ODBmYWIzYjgtM2YwYi10ETT0TEST0ZmMtMjhjZWI0ZTVhZGE0
-   - År-ID (school_year): 	ex. 0d35b17b-42eb-4311-9328-00eTt0TeSt00
-   - Lärare-ID: 		ex. KÅ
+   - Domän: ex. `kumla.skola24.se`
+   - Skola: välj i dropdown-listan
+   - Lärare-ID: ex. `KÅ`
+   - E-postadress för kalenderhändelserna
+
+   Skol-ID (`unit_guid`) fylls i automatiskt från vald skola. Aktuellt läsårs-ID (`school_year`) hämtas automatiskt från Skola24 när domän och skola är valda. Dessa interna fält är dolda i formuläret.
 
 3. Klicka på "Generera .ics" för att skapa din .ics-fil.
 4. Filen skapas och laddas hem.
@@ -65,28 +66,25 @@ Arbetsflöde
 -----------
 
 1. **Formulärinmatning:**
-   Användaren fyller i följande fält i formuläret:
-   - Domän (ex. kumla.skola24.se)
-   - Skolans namn (ex. Vialundskolan)
-   - Skol-ID (ex ODBmYWIzYjgtM2YwYi10ETT0TEST0ZmMtMjhjZWI0ZTVhZGE0
-   - År-ID (ex. 0d35b17b-42eb-4311-9328-00eTt0TeSt00
-   - Lärarens ID (ex. KÅ)
+   Användaren anger domän, väljer skola och fyller i lärar-ID samt e-postadress. Skolnamn och skol-ID sätts automatiskt från dropdown-listan.
 
+2. **Automatisk läsårsidentifiering:**
+   När domän och skola är valda anropar webbappen Skola24:s endpoint för aktiva läsår. Det aktuella läsårets GUID sparas i ett dolt `school_year`-fält. Om klientanropet inte har hunnit slutföras försöker servern hämta läsåret igen vid generering.
 
-2. **Autentisering**:
-   Formulärdatan används för att kontakta Skola24:s API och autentisera användaren baserat på domän och skolinformation. Lärarens schema identifieras med hjälp av Lärar-ID och År-ID.
+3. **Autentisering och schemahämtning:**
+   Formulärdatan används för att kontakta Skola24:s API. Lärarens schema identifieras med hjälp av lärar-ID, skol-ID och det automatiskt hämtade läsårs-ID:t.
 
-3. **Hämtning av schema**:
+4. **Hämtning av schema**:
    När användaren är autentiserad hämtas schema-data från Skola24 som bearbetas och konverteras till ett standardiserat .ics-format.
 
-4. **Generering av iCal-fil**:
+5. **Generering av iCal-fil**:
    - Kalenderhändelser skapas vecka för vecka.
    - Varje lektion får ett start- och sluttid baserat på schemat.
    - Information om klass, ämne, och sal läggs till som beskrivning i varje händelse.
    - Händelserna placeras automatiskt på rätt datum och tid i iCal-formatet.
    - .ics-filen genereras och laddas ner lokalt.
 
-5. **Färdigställande**:
+6. **Färdigställande**:
    Filen är redo att användas och innehåller all relevant schemainformation från Skola24.
 
 
