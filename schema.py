@@ -2,7 +2,7 @@ import os
 import re
 import requests
 import arrow
-from datetime import datetime
+from datetime import datetime, date
 
 # Loggning
 def log_message(message):
@@ -54,28 +54,67 @@ def get_key(s):
         log_message(f"Fel vid get_key: {e}")
         return None
 
-# Ny funktion: Justera veckodagar
-def adjust_day(api_day):
+def get_school_year_bounds(s, domain, school_year):
     """
-    Justera veckodag från söndag som första dag (API-logik) till måndag som första dag (ISO-standard).
-    """
-    adjusted_day = (api_day - 1) % 7 + 1
-    log_message(f"Justerar dag från API: {api_day} till ISO-standard: {adjusted_day}")
-    return adjusted_day
+    Hämta start- och slutår för valt läsår direkt från Skola24.
 
-def get_week(week, larare_id, s, domain, school_year, unit_guid):
+    Exempel: ett läsår med from=2026-07-01 och to=2027-06-30
+    returnerar (2026, 2027). Om API-anropet misslyckas används en
+    försiktig fallback baserad på innevarande datum.
+    """
+    try:
+        response = s.post(
+            "https://web.skola24.se/api/get/active/school/years",
+            headers=hdata,
+            json={
+                "hostName": domain,
+                "checkSchoolYearsFeatures": False,
+            },
+        )
+        response.raise_for_status()
+        school_years = response.json().get("data", {}).get("activeSchoolYears", [])
+
+        selected = next(
+            (item for item in school_years if item.get("guid") == school_year),
+            None,
+        )
+        if selected is None and len(school_years) == 1:
+            selected = school_years[0]
+
+        if selected and selected.get("from") and selected.get("to"):
+            start_year = datetime.fromisoformat(selected["from"]).year
+            end_year = datetime.fromisoformat(selected["to"]).year
+            log_message(
+                f"Läsår från Skola24: {selected.get('from')} - {selected.get('to')} "
+                f"(startår={start_year}, slutår={end_year})"
+            )
+            return start_year, end_year
+
+        log_message(
+            f"Kunde inte hitta läsår {school_year} i activeSchoolYears; använder fallback."
+        )
+    except Exception as e:
+        log_message(f"Kunde inte hämta activeSchoolYears: {e}; använder fallback.")
+
+    now = arrow.now("Europe/Stockholm")
+    if now.month >= 7:
+        return now.year, now.year + 1
+    return now.year - 1, now.year
+
+def get_year_for_week(week, school_year_start, school_year_end):
+    """Returnera rätt ISO-år för en vecka inom ett svenskt läsår."""
+    if 1 <= week < 26:
+        return school_year_end
+    if 26 < week <= 53:
+        return school_year_start
+    raise ValueError(f"Vecka {week} ligger på den avsiktligt överhoppade sommargränsen.")
+
+def get_week(week, larare_id, s, domain, school_year, unit_guid, school_year_start, school_year_end):
     log_message(f"Hämtar veckodata för vecka {week}")
     if week == 26:
         return None
 
-    if arrow.now().week < 26:
-        htyear = arrow.now().year - 1
-        vtyear = arrow.now().year
-    else:
-        htyear = arrow.now().year
-        vtyear = arrow.now().year + 1
-
-    year = vtyear if week < 26 else htyear
+    year = get_year_for_week(week, school_year_start, school_year_end)
 
     weekrequest = {
         'blackAndWhite': False,
@@ -108,28 +147,47 @@ def get_week(week, larare_id, s, domain, school_year, unit_guid):
         log_message(f"Fel vid get_week: {e}")
         return []
 
-def get_weekdata(week_nr, larare_id, s, domain, school_year, unit_guid):
+def get_weekdata(week_nr, larare_id, s, domain, school_year, unit_guid, school_year_start, school_year_end):
     log_message(f"Hämtar veckodata för vecka {week_nr}")
-    indata = get_week(week_nr, larare_id, s, domain, school_year, unit_guid)
-    week = [[], [], [], [], [], [], []]  # Justera för 7 dagar i veckan
+    indata = get_week(
+        week_nr,
+        larare_id,
+        s,
+        domain,
+        school_year,
+        unit_guid,
+        school_year_start,
+        school_year_end,
+    )
+    week = [[], [], [], [], [], [], []]
     if indata:
         for event in indata:
-            raw_day = event.get("dayOfWeekNumber", 1)  # Original dag från API:t
-            adjusted_day = adjust_day(raw_day)  # Justerad dag
-            log_message(f"Event från API: raw_day={raw_day}, adjusted_day={adjusted_day}")
-            week[adjusted_day - 1].append(event)
+            raw_day = event.get("dayOfWeekNumber")
+            try:
+                iso_day = int(raw_day)
+            except (TypeError, ValueError):
+                log_message(f"Ogiltig dayOfWeekNumber från API: {raw_day!r}; hoppar över event.")
+                continue
+
+            # Skola24 använder 1=måndag, 2=tisdag, ... 7=söndag.
+            # Detta är redan samma numrering som ISO-8601, så ingen förskjutning ska göras.
+            if not 1 <= iso_day <= 7:
+                log_message(f"dayOfWeekNumber utanför 1-7: {iso_day}; hoppar över event.")
+                continue
+
+            log_message(f"Event från API: dayOfWeekNumber={iso_day} (ISO-dag {iso_day})")
+            week[iso_day - 1].append(event)
     return week
 
-def todatestr(week, day):
-    """
-    Beräkna datum från vecka och veckodag enligt ISO-standard
-    """
-    year = arrow.now().year
-    first_week = arrow.get(year, 1, 4).floor("week")  # ISO-standard: första torsdagen definierar vecka 1
-    date = first_week.shift(weeks=week - 1, days=day - 1)
-    date = date.shift(days=-1)
-    log_message(f"Beräknar datum för vecka {week}, dag {day}: {date.format('YYYY-MM-DD')}")
-    return date.format("YYYYMMDD")
+def todatestr(week, iso_day, school_year_start, school_year_end):
+    """Beräkna lokalt kalenderdatum från ISO-år, ISO-vecka och ISO-veckodag."""
+    year = get_year_for_week(week, school_year_start, school_year_end)
+    calendar_date = date.fromisocalendar(year, week, iso_day)
+    log_message(
+        f"Beräknar datum: ISO-år={year}, vecka={week}, dag={iso_day} "
+        f"-> {calendar_date.isoformat()}"
+    )
+    return calendar_date.strftime("%Y%m%d")
 
 def todate(date_str, time_str):
 
@@ -200,19 +258,36 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
         log_message("Ingen lärar-ID mottagen")
         return None
 
-    # Hämta data för alla veckor
+    school_year_start, school_year_end = get_school_year_bounds(s, domain, school_year)
+    log_message(f"Genererar läsår {school_year_start}/{school_year_end}")
+
+    # Hämta data för alla relevanta veckor. Vecka 26 hoppas över som tidigare.
     for week in range(1, 53):
-        weeks[week] = get_weekdata(week, larare_id, s, domain, school_year, unit_guid)
+        if week == 26:
+            continue
+        weeks[week] = get_weekdata(
+            week,
+            larare_id,
+            s,
+            domain,
+            school_year,
+            unit_guid,
+            school_year_start,
+            school_year_end,
+        )
 
     events = []
     for week in weeks:
-        for day in range(5):  # Måndag till fredag
-            date = todatestr(week, day + 2)
-            for line in weeks[week][day]:
-                event = {"date": date}
+        for day_index in range(5):  # Måndag till fredag
+            iso_day = day_index + 1
+            event_date = todatestr(
+                week, iso_day, school_year_start, school_year_end
+            )
+            for line in weeks[week][day_index]:
+                event = {"date": event_date}
                 event["end"] = line.get("timeEnd", "")
                 event["start"] = line.get("timeStart", "")
-                event["uid"] = f"{line.get('guidId', '')}-{date}-{line.get('timeStart', '0000')}"
+                event["uid"] = f"{line.get('guidId', '')}-{event_date}-{line.get('timeStart', '0000')}"
                 event["summary"] = ""
                 event["attendee"] = email
                 description = []
@@ -302,4 +377,4 @@ def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
         return None
 
 if __name__ == '__main__':
-    geticsfor("example.com", "SchoolName", "unit-guid", "2024", "TeacherName")
+    geticsfor("example.com", "SchoolName", "unit-guid", "2024", "TeacherName", "teacher@example.com")
