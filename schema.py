@@ -316,6 +316,11 @@ def categorize_event(texts):
         kategorier = ["Övrig tid"]
         log_message("Felaktig 'texts' från API. Tilldelar 'Övrig tid'.")
 
+    # Alla exporterade kalenderposter ska kunna identifieras och filtreras som schema.
+    # Lägg alltid "Schema" sist, även om kategorilistan ändras framöver.
+    kategorier = [kategori for kategori in kategorier if kategori != "Schema"]
+    kategorier.append("Schema")
+
     return kategorier
 
 def geticsfor(domain, school_name, unit_guid, school_year, larare, email):
